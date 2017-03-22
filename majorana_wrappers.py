@@ -7,6 +7,8 @@ from qcodes.instrument.parameter import ManualParameter
 from qcodes.instrument.parameter import StandardParameter
 from qcodes.utils.validators import Enum
 
+import re
+
 from qcodes.utils.wrappers import _plot_setup, _save_individual_plots
 
 ##################################################
@@ -43,7 +45,9 @@ def _unassign_qdac_slope(sweep_parameter):
     a VoltageDivider instance.
     """
 
-    if not qdac_channel._instrument == qdac:
+    paramclass = str(sweep_parameter._instrument.__class__) 
+
+    if not paramclass == "<class 'qcodes.instrument_drivers.QDev.QDac.QDac'>":
         raise ValueError("Can't unassign slope from a non-qdac instrument!")
 
     # check wether we are dealing with a voltage divider, and if so,
@@ -94,11 +98,18 @@ def prepare_qdac(qdac_channel, start, stop, n_points, delay, ramp_slope):
     slope_parameter = qdac.parameters['ch{0:02d}_slope'.format(channel_id)]
     slope_parameter(ramp_slope)
 
-    init_ramp_time = abs(start-qdac_channel.get())/ramp_slope
+    try:
+        init_ramp_time = abs(start-qdac_channel.get())/ramp_slope
+    except TypeError:
+        init_ramp_time = 0
+
     qdac_channel.set(start)
     time.sleep(init_ramp_time)
 
-    additional_delay_perPoint = (abs(stop-start)/n_points)/ramp_slope
+    try:
+        additional_delay_perPoint = (abs(stop-start)/n_points)/ramp_slope
+    except TypeError:
+        additional_delay_perPoint = 0
 
     return additional_delay_perPoint, ramp_slope
 
@@ -140,7 +151,7 @@ def do1d_M(inst_set, start, stop, n_points, delay, *inst_meas, ramp_slope=None):
     return plot, data
 
 
-def do2d_M(inst_set, start, stop, n_points, delay, inst_set2, start2, stop2,
+def do2d_MW(inst_set, start, stop, n_points, delay, inst_set2, start2, stop2,
            n_points2, delay2, *inst_meas, ramp_slope1=None, ramp_slope2=None,
            inter_loop_sleep_time=0):
     """
@@ -169,7 +180,10 @@ def do2d_M(inst_set, start, stop, n_points, delay, inst_set2, start2, stop2,
                                                                ramp_slope2)
         delay2 += additional_delay_perPoint2
         # print('delay2: {}'.format(delay2))
-        inter_loop_sleep_time += abs(stop2-start2)/ramp_slope2 + 0.05
+        try:
+            inter_loop_sleep_time += abs(stop2-start2)/ramp_slope2 + 0.05
+        except TypeError:
+            inter_loop_sleep_time += 0.05
 
     # FUGLY hack... but how to do it properly?
     if str(inst_set._instrument.__class__) == "<class 'qcodes.instrument_drivers.QDev.QDac.QDac'>":
@@ -182,12 +196,15 @@ def do2d_M(inst_set, start, stop, n_points, delay, inst_set2, start2, stop2,
         if getattr(inst, "setpoints", False):
             raise ValueError("3d plotting is not supported")
 
-    loop = qc.Loop(inst_set.sweep(start, stop, num=n_points), delay).each(
-        qc.Loop(inst_set2.sweep(start2, stop2, num=n_points2), delay2).each(
-            *inst_meas
+    qdac.ch03_v(3)
+    qdac.ch03_v(0)
+
+
+    loop = qc.Loop(inst_set.sweep(start, stop, num=n_points), delay).loop(inst_set2.sweep(start2, stop2, num=n_points2), delay2).each(
+             *inst_meas)
             # qc.Task(inst_set2.set, start))
             # qc.Wait(inter_loop_sleep_time)
-        ))
+
 
     data = loop.get_data_set()
     plot = _plot_setup(data, inst_meas)
