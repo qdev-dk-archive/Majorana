@@ -118,7 +118,7 @@ def do1d_M(inst_set, start, stop, n_points, delay, *inst_meas, ramp_slope=None):
         plot, data : returns the plot and the dataset
 
     """
-    if inst_set._instrument == qdac:
+    if str(inst_set._instrument.__class__) == "<class 'qcodes.instrument_drivers.QDev.QDac.QDac'>":
         additional_delay_perPoint, _ = prepare_qdac(inst_set, start,
                                                     stop, n_points, delay,
                                                     ramp_slope)
@@ -162,7 +162,7 @@ def do2d_M(inst_set, start, stop, n_points, delay, inst_set2, start2, stop2,
         plot, data : returns the plot and the dataset
     """
 
-    if inst_set2._instrument == qdac:
+    if str(inst_set2._instrument.__class__) == "<class 'qcodes.instrument_drivers.QDev.QDac.QDac'>":
         additional_delay_perPoint2, ramp_slope2 = prepare_qdac(inst_set2, start2,
                                                                stop2,
                                                                n_points2, delay2,
