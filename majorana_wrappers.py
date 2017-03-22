@@ -171,7 +171,8 @@ def do2d_M(inst_set, start, stop, n_points, delay, inst_set2, start2, stop2,
         # print('delay2: {}'.format(delay2))
         inter_loop_sleep_time += abs(stop2-start2)/ramp_slope2 + 0.05
 
-    if inst_set._instrument == qdac:
+    # FUGLY hack... but how to do it properly?
+    if str(inst_set._instrument.__class__) == "<class 'qcodes.instrument_drivers.QDev.QDac.QDac'>":
         additional_delay_perPoint, ramp_slope1 = prepare_qdac(inst_set, start, stop,
                                                      n_points, delay, ramp_slope1)
         delay = max(delay, inter_loop_sleep_time)
