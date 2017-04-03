@@ -18,7 +18,7 @@ class ConfigFile:
     """
 
     def __init__(self):
-        self._filename = 'Scripts/sample.config'
+        self._filename = 'sample.config'
         self._cfg = ConfigParser()
         self._load()
 
