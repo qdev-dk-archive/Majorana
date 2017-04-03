@@ -22,7 +22,7 @@ import time
 from configparser import ConfigParser
 
 # Initialisation of intruments
-qdac = QDac('qdac', 'ASRL6::INSTR', readcurrents=False)
+qdac = QDac('qdac', 'ASRL6::INSTR', update_currents=False)
 lockin_topo = SR830('lockin_topo', 'GPIB10::7::INSTR')
 lockin_left = SR830('lockin_l', 'GPIB10::14::INSTR')
 lockin_right = SR830('lockin_r', 'GPIB10::10::INSTR')
@@ -39,4 +39,4 @@ else:
 
 # Initialisation of the experiment
 
-qc.init("./Basic_quantum_dot_measurements", "DRALD00ID3")
+qc.init("./Basic_quantum_dot_measurements", "DRALD00ID3", STATION)
