@@ -18,7 +18,7 @@ class ConfigFile:
     """
 
     def __init__(self):
-        self._filename = 'sample.config'
+        self._filename = 'Scripts/sample.config'
         self._cfg = ConfigParser()
         self._load()
 
@@ -37,11 +37,12 @@ class ConfigFile:
         Example: ConfigFile.get('QDac Channel Labels', '2')
         """
         # Try to be really clever about the input
-        if not isinstance(field, str):
+        if not isinstance(field, str) and (field is not None):
             field = '{}'.format(field)
 
         if field is None:
-            output = dict(zip(cfg[section].keys(), cfg[section].values()))
+            output = dict(zip(self._cfg[section].keys(),
+                              self._cfg[section].values()))
         else:
             output = self._cfg[section][field]
 
@@ -83,7 +84,8 @@ def used_channels():
     Return a list of currently labelled channels as ints.
     """
     l_chs = configs.get('QDac Channel Labels')
-    return [int(key) for key in l_chs.keys()]
+    chans = [int(key) for key in l_chs.keys()]
+    return sorted(chans)
 
 
 def used_voltage_params():
@@ -122,8 +124,8 @@ def qdac_slopes():
                            len(used_channels())*[qdac_slope]))
 
     QDAC_SLOPES[int(configs.get('Channel Parameters',
-                                'backgate channel'))] = bg_slope 
-    for ii in bias_channels:
+                                'backgate channel'))] = bg_slope
+    for ii in bias_channels():
         QDAC_SLOPES[ii] = bias_slope
 
     return QDAC_SLOPES
@@ -134,17 +136,17 @@ def qdac_slopes():
 IV_CONV_GAIN_TOPO = ManualParameter('IVgain topo bias',
                                     unit='V/A',
                                     vals=Enum(1e5, 1e6, 1e7, 1e8, 1e9))
-IV_CONV_GAIN_TOPO(float(configs.get('Gain settings', 'IV topo gain')))
+IV_CONV_GAIN_TOPO(float(configs.get('Gain settings', 'iv topo gain')))
 
 IV_CONV_GAIN_R = ManualParameter('IVgain sens right',
                                  unit='V/A',
                                  vals=Enum(1e5, 1e6, 1e7, 1e8, 1e9))
-IV_CONV_GAIN_R(float(configs.get('Gain settings', 'IV right gain')))
+IV_CONV_GAIN_R(float(configs.get('Gain settings', 'iv right gain')))
 
 IV_CONV_GAIN_L = ManualParameter('IVgain sens left',
                                  unit='V/A',
                                  vals=Enum(1e5, 1e6, 1e7, 1e8, 1e9))
-IV_CONV_GAIN_L(float(configs.get('Gain settings', 'IV left gain')))
+IV_CONV_GAIN_L(float(configs.get('Gain settings', 'iv left gain')))
 
 
 AC_EXCITATION_TOPO = VoltageDivider(lockin_topo.amplitude,
@@ -164,7 +166,7 @@ AC_EXCITATION_L = VoltageDivider(lockin_left.amplitude,
 # AT SAMPLE from that channel
 
 # first initialise it with the 'raw' voltages
-QDAC = dict(zip(used_voltages(), used_channels()))
+QDAC = dict(zip(used_channels(), used_voltage_params()))
 
 # then add all voltage dividers  (why is this commented out?)
 # QDAC[5] = VoltageDivider(QDAC[5], configs.get('Gain settings', 'dc factor ch')
@@ -211,11 +213,28 @@ def get_conductance(lockin, ac_excitation, iv_conv):
     get_cmd for conductance parameter
     """
     resistance_quantum = 25.818e3  # [Ohm]
-    i = lockin.X() / iv_conv()
+    X_val = lockin.X()
+    i = X_val / iv_conv
     # ac excitation voltage at the sample
     v_sample = ac_excitation()
+    # print('DEBUG: X, IV_conv, AC: {}, {}, {}'.format(X_val, iv_conv, v_sample))
     return (i/v_sample)*resistance_quantum
 
+# Delete conductance parameters, if they are already defined
+try:
+    del lockin_topo.parameters['g']
+except KeyError:
+    pass
+
+try:
+    del lockin_right.parameters['g']
+except KeyError:
+    pass
+
+try:
+    del lockin_left.parameters['g']
+except KeyError:
+    pass
 
 lockin_topo.add_parameter(name='g',
                           label='Topo g (e^2/h)',
@@ -223,7 +242,7 @@ lockin_topo.add_parameter(name='g',
                           get_cmd=partial(get_conductance,
                                           lockin_topo, AC_EXCITATION_TOPO,
                                           float(configs.get('Gain settings',
-                                                            'ac factor topo'))),
+                                                            'iv topo gain'))),
                           set_cmd=None)
 
 lockin_right.add_parameter(name='g',
@@ -232,14 +251,14 @@ lockin_right.add_parameter(name='g',
                            get_cmd=partial(get_conductance,
                                            lockin_right, AC_EXCITATION_R,
                                            float(configs.get('Gain settings',
-                                                             'ac factor right'))),
+                                                             'iv right gain'))),
                            set_cmd=None)
 
 lockin_left.add_parameter(name='g',
                           label='Sensor left g (e^2/h)',
                           unit='',
                           get_cmd=partial(get_conductance,
-                                          lockin_left, AC_EXCITATION_R,
+                                          lockin_left, AC_EXCITATION_L,
                                           float(configs.get('Gain settings',
-                                                            'ac factor left'))),
+                                                            'iv left gain'))),
                           set_cmd=None)
