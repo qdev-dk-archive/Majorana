@@ -51,7 +51,7 @@ def _unassign_qdac_slope(sweep_parameter):
     a VoltageDivider instance.
     """
 
-    paramclass = str(sweep_parameter._instrument.__class__) 
+    paramclass = str(sweep_parameter._instrument.__class__)
 
     if not paramclass == "<class 'qcodes.instrument_drivers.QDev.QDac.QDac'>":
         raise ValueError("Can't unassign slope from a non-qdac instrument!")
@@ -120,41 +120,6 @@ def prepare_qdac(qdac_channel, start, stop, n_points, delay, ramp_slope):
     return additional_delay_perPoint, ramp_slope
 
 
-def do1d(inst_set, start, stop, n_points, delay, *inst_meas):
-    """
-    Args:
-        inst_set:  Instrument to sweep over
-        start:  Start of sweep
-        stop:  End of sweep
-        division:  Spacing between values
-        delay:  Delay at every step
-        *inst_meas:  any number of instrument to measure
-    Returns:
-        plot, data : returns the plot and the dataset
-    """
-
-    loop = qc.Loop(inst_set.sweep(start, stop, num=n_points),
-                   delay).each(*inst_meas)
-
-    data = loop.get_data_set()
-    plottables = _select_plottables(inst_meas)
-    plot = _plot_setup(data, plottables)
-
-    try:
-        _ = loop.with_bg_task(plot.update, plot.save).run()
-    except KeyboardInterrupt:
-        print("Measurement Interrupted")
-
-    _save_individual_plots(data, plottables)
-
-    cur_exp = qc.utils.wrappers.CURRENT_EXPERIMENT
-    if cur_exp.get('device_image'):
-        log.debug('Saving annotated device image')
-        qc.utils.wrappers.save_device_image()
-
-    return plot, data
-
-
 def do1d_M(inst_set, start, stop, n_points, delay, *inst_meas, ramp_slope=None):
     """
     !!!!!EXPERIMENTAL!!!!
@@ -197,53 +162,6 @@ def do1d_M(inst_set, start, stop, n_points, delay, *inst_meas, ramp_slope=None):
         qc.utils.wrappers.save_device_image()
 
     return plot, data
-
-def do2d(inst_set, start, stop, n_points, delay, inst_set2, start2, stop2,
-           n_points2, delay2, *inst_meas):
-    """
-    Args:
-        inst_set:  Instrument to sweep over
-        start:  Start of sweep
-        stop:  End of sweep
-        division:  Spacing between values
-        delay:  Delay at every step
-        inst_set_2:  Second instrument to sweep over
-        start_2:  Start of sweep for second intrument
-        stop_2:  End of sweep for second intrument
-        division_2:  Spacing between values for second intrument
-        delay_2:  Delay at every step for second intrument
-        *inst_meas:
-        ramp_slope:
-
-    Returns:
-        plot, data : returns the plot and the dataset
-    """
-
-    for inst in inst_meas:
-        if getattr(inst, "setpoints", False):
-            raise ValueError("3d plotting is not supported")
-
-    loop = qc.Loop(inst_set.sweep(start, stop, num=n_points), delay).loop(inst_set2.sweep(start2, stop2, num=n_points2), delay2).each(
-             *inst_meas)
-
-
-    data = loop.get_data_set()
-    plottables = _select_plottables(inst_meas)
-    plot = _plot_setup(data, plottables)
-    try:
-        _ = loop.with_bg_task(plot.update, plot.save).run()
-    except KeyboardInterrupt:
-        print("Measurement Interrupted")
-
-    _save_individual_plots(data, plottables)
-
-    cur_exp = qc.utils.wrappers.CURRENT_EXPERIMENT
-    if cur_exp.get('device_image'):
-        log.debug('Saving annotated device image')
-        qc.utils.wrappers.save_device_image()
-
-    return plot, data
-
 
 
 def do2d_M(inst_set, start, stop, n_points, delay, inst_set2, start2, stop2,
