@@ -18,7 +18,7 @@ class ConfigFile:
     """
 
     def __init__(self):
-        self._filename = 'sample.config'
+        self._filename = 'modules/Majorana/sample.config'
         self._cfg = ConfigParser()
         self._load()
 
