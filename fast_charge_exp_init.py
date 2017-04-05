@@ -25,7 +25,7 @@ qdac = QDac('qdac', 'ASRL6::INSTR', update_currents=False)
 zi = ZIUHFLI('uhfli', 'dev2235')
 keysight = Keysight_33500B('keysight','TCPIP0::K-33522B-00256::inst0::INSTR')
 
-CODING_MODE = True
+CODING_MODE = False
 
 # NOTE (giulio) this line is super important for metadata
 # if one does not put the intruments in here there is no metadata!!
@@ -34,7 +34,4 @@ if CODING_MODE:
                 'bound to Station and hence not logged properly.')
 else:
     STATION = qc.Station(zi, keysight, qdac)
-
-# Initialisation of the experiment
-
-qc.init("./Basic_quantum_dot_measurements", "DRALD00ID3")
+    qc.init("./TS_fast_charge_diagrams_01", "test_setup_sample", STATION)
