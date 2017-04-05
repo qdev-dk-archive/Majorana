@@ -68,12 +68,11 @@ def prepare_measurement(keysight_low_V, keysight_high_V, scope_avger):
 
 def fast_charge_diagram(keysight_channel, fast_v_start, fast_v_stop, n_averages,
                         qdac_channel, q_start, q_stop, npoints, delay,
-                        zi_input_signal=['Signal Input 1'], zi_trig_signal='Trig Input 1',
-                        scope_channels=['ch01'],
+                        scope_signal=['Demod 1 R', 'Demod 5 R'], zi_trig_signal='Trig Input 1',  
                         trigger_holdoff=60e-6, zi_samplingrate='14.0 MHz', zi_scope_length=4096,
                         zi_trig_hyst=0, zi_trig_level=.5, zi_trig_delay = 0, print_settings=False,
                         tasks_to_perform=None):
-    '''
+    """
     Args:
         keysight_channel:
         fast_v_start
@@ -93,7 +92,10 @@ def fast_charge_diagram(keysight_channel, fast_v_start, fast_v_stop, n_averages,
         zi_trig_level:
         zi_trig_delay: Should be the rise time of your signal/trigger signal 
                        For Keysight sawtooth it is 6e-7s.
-    '''
+    """
+
+    if keysight_channel not in ['ch01', 'ch02']:
+        raise ValueError('Invalid keysight channel. Must be either "ch01" or "ch02".')
     
     # In order to take thee hold off time of the uhfli into account
     # we need to recalculate the scope duration, sawtooth amplitude
