@@ -15,9 +15,12 @@ class Scope_avg(ArrayParameter):
 
         self.channel = channel
 
-    def make_setpoints(self, sp_start, sp_stop, sp_npts, unit=''):
+    def make_setpoints(self, sp_start, sp_stop, sp_npts):
+        """
+        Makes setpoints and prepares the averager (updates its unit)
+        """
         self.shape = (sp_npts,)
-        self.unit = unit
+        self.unit = self._instrument.Scope.units[self.channel-1]
         self.setpoints = (tuple(np.linspace(sp_start, sp_stop, sp_npts)),)
         self.has_setpoints = True
 
@@ -47,16 +50,23 @@ except KeyError:
     pass
 
 
-def prepare_measurement(keysight_low_V, keysight_high_V, scope_avger):
+def prepare_measurement(keysight_low_V, keysight_high_V, scope_avger, qdac_fast_channel):
     """
     Args:
+        keysight_low_V (float): keysight ramp start value
+        keysight_high_V (float): keysight ramp stop value
+        scope_avger (Scope_avg): The Scope_avg instance
+        qdac_fast_channel (int): The number of the QDac channel added to
+            the Keysight ramp
     """
     zi.Scope.prepare_scope()
     npts = zi.scope_length()
     
-    scope_avger.make_setpoints(keysight_low_V, keysight_high_V, npts)
+    offset = qdac.parameters['ch{:02}_v'.format(qdac_fast_channel)].get()
+
+    scope_avger.make_setpoints(keysight_low_V+offset, keysight_high_V+offset, npts)
     scope_avger.setpoint_names = ('keysight_voltage',)
-    scope_avger.setpoint_labels = ('Keysight Voltage q48',)
+    scope_avger.setpoint_labels = ('Fast q{}'.format(qdac_fast_channel),)
     scope_avger.setpoint_units = ('V',)
 
     # zi.scope_avg_ch1.make_setpoints(keysight_low_V, keysight_high_V, npts)
@@ -68,7 +78,8 @@ def prepare_measurement(keysight_low_V, keysight_high_V, scope_avger):
 
 def fast_charge_diagram(keysight_channel, fast_v_start, fast_v_stop, n_averages,
                         qdac_channel, q_start, q_stop, npoints, delay,
-                        scope_signal=['Demod 1 R', 'Demod 5 R'], zi_trig_signal='Trig Input 1',  
+                        scope_signal=['Demod 1 R', 'Demod 5 R'], zi_trig_signal='Trig Input 1',
+                        qdac_fast_channel=48,  
                         trigger_holdoff=60e-6, zi_samplingrate='14.0 MHz', zi_scope_length=4096,
                         zi_trig_hyst=0, zi_trig_level=.5, zi_trig_delay = 0, print_settings=False,
                         tasks_to_perform=None):
@@ -96,6 +107,9 @@ def fast_charge_diagram(keysight_channel, fast_v_start, fast_v_stop, n_averages,
 
     if keysight_channel not in ['ch01', 'ch02']:
         raise ValueError('Invalid keysight channel. Must be either "ch01" or "ch02".')
+
+    if not isinstance(scope_signal, list):
+        scope_signal = [scope_signal]
     
     # In order to take thee hold off time of the uhfli into account
     # we need to recalculate the scope duration, sawtooth amplitude
@@ -144,7 +158,7 @@ def fast_charge_diagram(keysight_channel, fast_v_start, fast_v_stop, n_averages,
     if keysight_channel == 'ch01':
         keysight.ch1_function_type('RAMP')
         keysight.ch1_ramp_symmetry(100*(1-asym))
-        keysight.ch1_phase(360*(0.75-asym))
+        keysight.ch1_phase(180*(1+asym))
         keysight.ch1_amplitude_unit('VPP')
         keysight.ch1_amplitude(keysight_amplitude)
         keysight.ch1_offset(key_offset)
@@ -154,7 +168,7 @@ def fast_charge_diagram(keysight_channel, fast_v_start, fast_v_stop, n_averages,
     elif keysight_channel == 'ch02':
         keysight.ch2_function_type('RAMP')
         keysight.ch2_ramp_symmetry(100*(1-asym))
-        keysight.ch2_phase(360*(0.75-asym))
+        keysight.ch2_phase(180*(1+asym))
         keysight.ch2_amplitude_unit('VPP')
         keysight.ch2_amplitude(keysight_amplitude)
         keysight.ch2_offset(key_offset)
@@ -165,22 +179,17 @@ def fast_charge_diagram(keysight_channel, fast_v_start, fast_v_stop, n_averages,
         raise ValueError('Select a valid Keysight channel.')
 
     scope_avger = []
-    zi_averager = {'ch01': zi.scope_avg_ch1,
-                   'ch1': zi.scope_avg_ch1,
-                   'ch02': zi.scope_avg_ch2,
-                   'ch2': zi.scope_avg_ch2}
+    zi_averager = {0: zi.scope_avg_ch1,
+                   1: zi.scope_avg_ch2}
 
-    for ch in scope_channels:
-        if ch == 'ch01':
-            zi.scope_channel1_input(zi_input_signal[0])
-            zi_averager[ch].label = zi_input_signal[0]
-        elif ch == 'ch02':
-            zi.scope_channel2_input(zi_input_signal[-1])
-            zi_averager[ch].label = zi_input_signal[-1]
+    for ii, sig in enumerate(scope_signal):
+        zi.scope_channel1_input(sig)
+        zi_averager[ii].label = sig
 
         try:
-            scope_avger.append(zi_averager[ch])
-            prepare_measurement(fast_v_start, fast_v_stop, zi_averager[ch])
+            scope_avger.append(zi_averager[ii])
+            prepare_measurement(fast_v_start, fast_v_stop, zi_averager[ii],
+                                qdac_fast_channel)
         except KeyError:
             raise ValueError('Invalid scope_channel: {}'.format(ch))
 
