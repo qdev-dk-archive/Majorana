@@ -37,8 +37,8 @@ if CODING_MODE:
     lg.critical('You are currently in coding mode - instruments are not ' +
                 'bound to Station and hence not logged properly.')
 else:
-    STATION = qc.Station(qdac, lockin_topo, lockin_right, lockin_left)
+    STATION = qc.Station(qdac, lockin_topo, lockin_right, lockin_left, keysight, zi)
 
 # Initialisation of the experiment
 
-qc.init("./first_QCoDeS_run", "DRALD_001D3", STATION)
+qc.init("./MajoQubit", "DRALD_001D3", STATION)
