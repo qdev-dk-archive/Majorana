@@ -18,7 +18,7 @@ class ConfigFile:
     """
 
     def __init__(self):
-        self._filename = 'sample.config'
+        self._filename = 'modules/Majorana/sample.config'
         self._cfg = ConfigParser()
         self._load()
 
@@ -134,17 +134,17 @@ def qdac_slopes():
 IV_CONV_GAIN_TOPO = ManualParameter('IVgain topo bias',
                                     unit='V/A',
                                     vals=Enum(1e5, 1e6, 1e7, 1e8, 1e9))
-IV_CONV_GAIN_TOPO(float(configs.get('Gain settings', 'IV topo gain')))
+IV_CONV_GAIN_TOPO(float(configs.get('Gain settings', 'iv topo gain')))
 
 IV_CONV_GAIN_R = ManualParameter('IVgain sens right',
                                  unit='V/A',
                                  vals=Enum(1e5, 1e6, 1e7, 1e8, 1e9))
-IV_CONV_GAIN_R(float(configs.get('Gain settings', 'IV right gain')))
+IV_CONV_GAIN_R(float(configs.get('Gain settings', 'iv right gain')))
 
 IV_CONV_GAIN_L = ManualParameter('IVgain sens left',
                                  unit='V/A',
                                  vals=Enum(1e5, 1e6, 1e7, 1e8, 1e9))
-IV_CONV_GAIN_L(float(configs.get('Gain settings', 'IV left gain')))
+IV_CONV_GAIN_L(float(configs.get('Gain settings', 'iv left gain')))
 
 
 AC_EXCITATION_TOPO = VoltageDivider(lockin_topo.amplitude,
@@ -161,21 +161,12 @@ AC_EXCITATION_L = VoltageDivider(lockin_left.amplitude,
 ##################################################
 # The QDAC dict exposed to the user. This dict contains a mapping from
 # channel number to QCoDeS object whose 'get' method returns the voltage
-# AT SAMPLE from that channel
+# AT SAMPLE (attenuation not taken into account yet) from that channel
 
 # first initialise it with the 'raw' voltages
 QDAC = dict(zip(used_voltages(), used_channels()))
 
-# then add all voltage dividers  (why is this commented out?)
-# QDAC[5] = VoltageDivider(QDAC[5], configs.get('Gain settings', 'dc factor ch')
-# QDAC[12] = VoltageDivider(QDAC[12], configs.get('Gain settings', 'dc factor ch')
-# QDAC[17] = VoltageDivider(QDAC[17], configs.get('Gain settings', 'dc factor ch')
-# QDAC[24] = VoltageDivider(QDAC[24], configs.get('Gain settings', 'dc factor ch2')
-# QDAC[45] = VoltageDivider(QDAC[45], configs.get('Gain settings', 'dc factor ch')
-# QDAC[48] = VoltageDivider(QDAC[48], configs.get('Gain settings', 'dc factor ch')
-
 # User defined special channels with special names exposed to the user
-
 topo_bias = VoltageDivider(QDAC[int(configs.get('Channel Parameters',
                                                 'topo bias channel'))],
                            float(configs.get('Gain settings',
@@ -200,12 +191,9 @@ for ch in used_channels():
 
 # A dictionary with max ramp speed for qDac channels.
 # Bias channels, backgate and cutters/plungers have their own values
-
 QDAC_SLOPES = qdac_slopes()
 
 # Adding a parameter for conductance measurement
-
-
 def get_conductance(lockin, ac_excitation, iv_conv):
     """
     get_cmd for conductance parameter
