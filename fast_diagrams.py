@@ -62,11 +62,11 @@ def prepare_measurement(keysight_low_V, keysight_high_V, scope_avger, qdac_fast_
     zi.Scope.prepare_scope()
     npts = zi.scope_length()
     
-    offset = qdac.parameters['ch{:02}_v'.format(qdac_fast_channel)].get()
+    offset = 0 # qdac.parameters['ch{:02}_v'.format(qdac_fast_channel)].get()
 
     scope_avger.make_setpoints(keysight_low_V+offset, keysight_high_V+offset, npts)
     scope_avger.setpoint_names = ('keysight_voltage',)
-    scope_avger.setpoint_labels = ('Fast q{}'.format(qdac_fast_channel),)
+    scope_avger.setpoint_labels = ('Fast {}'.format(QDAC[qdac_fast_channel].label),)
     scope_avger.setpoint_units = ('V',)
 
     # zi.scope_avg_ch1.make_setpoints(keysight_low_V, keysight_high_V, npts)
