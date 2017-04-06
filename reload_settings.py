@@ -200,7 +200,7 @@ def get_conductance(lockin, ac_excitation, iv_conv):
     get_cmd for conductance parameter
     """
     resistance_quantum = 25.818e3  # [Ohm]
-    i = lockin.X() / iv_conv()
+    i = lockin.X() / iv_conv
     # ac excitation voltage at the sample
     v_sample = ac_excitation()
     return (i/v_sample)*resistance_quantum
