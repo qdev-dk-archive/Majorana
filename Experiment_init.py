@@ -29,7 +29,7 @@ lockin_topo = SR830('lockin_topo', 'GPIB10::7::INSTR')
 lockin_left = SR830('lockin_l', 'GPIB10::14::INSTR')
 lockin_right = SR830('lockin_r', 'GPIB10::10::INSTR')
 keysight = Keysight_33500B('keysight', 'TCPIP0::A-33522B-12403::inst0::INSTR')
-zi =  ZIUHFLI('uhfli', 'dev2189')
+zi =  ZIUHFLI('ziuhfli', 'dev2189')
 
 CODING_MODE = False
 
