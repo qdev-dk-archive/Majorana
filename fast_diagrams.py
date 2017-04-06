@@ -77,9 +77,8 @@ def prepare_measurement(keysight_low_V, keysight_high_V, scope_avger, qdac_fast_
 
 
 def fast_charge_diagram(keysight_channel, fast_v_start, fast_v_stop, n_averages,
-                        qdac_channel, q_start, q_stop, npoints, delay,
-                        scope_signal=['Demod 1 R', 'Demod 5 R'], zi_trig_signal='Trig Input 1',
-                        qdac_fast_channel=48,  
+                        qdac_channel, q_start, q_stop, npoints, delay, qdac_fast_channel,
+                        scope_signal, zi_trig_signal='Trig Input 1',
                         trigger_holdoff=60e-6, zi_samplingrate='14.0 MHz', zi_scope_length=4096,
                         zi_trig_hyst=0, zi_trig_level=.5, zi_trig_delay = 0, print_settings=False,
                         tasks_to_perform=None):
@@ -111,6 +110,8 @@ def fast_charge_diagram(keysight_channel, fast_v_start, fast_v_stop, n_averages,
     if not isinstance(scope_signal, list):
         scope_signal = [scope_signal]
     
+    if not scope_signal:
+        raise ValueError('Select valid scope signal(s).')
     # In order to take thee hold off time of the uhfli into account
     # we need to recalculate the scope duration, sawtooth amplitude
     # and keysight frequency.
@@ -132,8 +133,6 @@ def fast_charge_diagram(keysight_channel, fast_v_start, fast_v_stop, n_averages,
     keysight_amplitude = abs(fast_v_stop-fast_v_start)
     key_offset = fast_v_start + keysight_amplitude/2
     # fast_v_start -= additional_sawtooth_amplitude
-
-    print(keysight_amplitude, key_offset)
 
     zi.scope_channels(3)
     zi.scope_trig_holdoffseconds.set(trigger_holdoff)
@@ -183,7 +182,12 @@ def fast_charge_diagram(keysight_channel, fast_v_start, fast_v_stop, n_averages,
                    1: zi.scope_avg_ch2}
 
     for ii, sig in enumerate(scope_signal):
-        zi.scope_channel1_input(sig)
+        if ii == 0:
+            zi.scope_channel1_input(sig)
+        elif ii == 1:
+            zi.scope_channel2_input(sig)
+        else:
+            raise ValueError('Select only one or two scope signals.')
         zi_averager[ii].label = sig
 
         try:
