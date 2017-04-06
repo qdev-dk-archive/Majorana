@@ -231,28 +231,3 @@ def fast_charge_diagram(keysight_channel, fast_v_start, fast_v_stop, n_averages,
         print('Measurement interrupted.')
 
     return plot, data
-
-
-
-# SETUP ZI UHFLI
-
-# zi.scope_samplingrate.set('56.2 MHz')
-#zi.scope_samplingrate.set('14.0 MHz')
-#zi.scope_trig_holdoffseconds.set(50e-6)
-
-#zi.scope_duration.set(500e-6-zi.scope_trig_holdoffseconds())
-
-#zi.scope_average_weight(1)
-#zi.scope_trig_enable.set('ON')
-#zi.scope_trig_signal.set('Signal Input 2')
-#zi.scope_trig_slope.set('Rise')
-#zi.scope_trig_level.set(100e-3)
-#zi.scope_trig_hystmode('absolute')
-#zi.scope_trig_hystabsolute.set(20e-3)
-#zi.scope_trig_gating_enable.set('OFF')
-#zi.scope_trig_holdoffmode.set('s')
-
-# zi.scope_trig_reference.set(0)
-# zi.scope_trig_delay.set(0)
-# zi.scope_segments('ON')
-# zi.scope_segments_count(50)
