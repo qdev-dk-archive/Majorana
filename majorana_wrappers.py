@@ -21,9 +21,9 @@ def print_voltages():
     """
 
     max_col_width = 38
-    for channel in used_channels:
+    for channel in used_channels():
         col_width = max_col_width - len(QDAC[channel].label)
-        mssg = ('Ch {: >2} - {} '.format(channel, QDAC[channel].label()) +
+        mssg = ('Ch {: >2} - {} '.format(channel, QDAC[channel].label) +
                 ': {:>{col_width}}'.format(QDAC[channel].get(),
                                            col_width=col_width))
         print(mssg)
