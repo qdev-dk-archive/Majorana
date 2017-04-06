@@ -37,11 +37,12 @@ class ConfigFile:
         Example: ConfigFile.get('QDac Channel Labels', '2')
         """
         # Try to be really clever about the input
-        if not isinstance(field, str):
+        if not isinstance(field, str) and (field is not None):
             field = '{}'.format(field)
 
         if field is None:
-            output = dict(zip(cfg[section].keys(), cfg[section].values()))
+            output = dict(zip(self._cfg[section].keys(),
+                              self._cfg[section].values()))
         else:
             output = self._cfg[section][field]
 
@@ -123,7 +124,7 @@ def qdac_slopes():
 
     QDAC_SLOPES[int(configs.get('Channel Parameters',
                                 'backgate channel'))] = bias_slope
-    for ii in bias_channels:
+    for ii in bias_channels():
         QDAC_SLOPES[ii] = bias_slope
 
     return QDAC_SLOPES
@@ -164,7 +165,7 @@ AC_EXCITATION_L = VoltageDivider(lockin_left.amplitude,
 # AT SAMPLE (attenuation not taken into account yet) from that channel
 
 # first initialise it with the 'raw' voltages
-QDAC = dict(zip(used_voltages(), used_channels()))
+QDAC = dict(zip(used_channels(), used_voltage_params()))
 
 # User defined special channels with special names exposed to the user
 topo_bias = VoltageDivider(QDAC[int(configs.get('Channel Parameters',
@@ -203,6 +204,23 @@ def get_conductance(lockin, ac_excitation, iv_conv):
     # ac excitation voltage at the sample
     v_sample = ac_excitation()
     return (i/v_sample)*resistance_quantum
+
+
+# Delete conductance parameters, if they are already defined
+try:
+    del lockin_topo.parameters['g']
+except KeyError:
+    pass
+
+try:
+    del lockin_right.parameters['g']
+except KeyError:
+    pass
+
+try:
+    del lockin_left.parameters['g']
+except KeyError:
+    pass
 
 
 lockin_topo.add_parameter(name='g',
