@@ -229,7 +229,7 @@ lockin_topo.add_parameter(name='g',
                           get_cmd=partial(get_conductance,
                                           lockin_topo, AC_EXCITATION_TOPO,
                                           float(configs.get('Gain settings',
-                                                            'ac factor topo'))),
+                                                            'iv topo gain'))),
                           set_cmd=None)
 
 lockin_right.add_parameter(name='g',
@@ -238,7 +238,7 @@ lockin_right.add_parameter(name='g',
                            get_cmd=partial(get_conductance,
                                            lockin_right, AC_EXCITATION_R,
                                            float(configs.get('Gain settings',
-                                                             'ac factor right'))),
+                                                             'iv right gain'))),
                            set_cmd=None)
 
 lockin_left.add_parameter(name='g',
@@ -247,5 +247,5 @@ lockin_left.add_parameter(name='g',
                           get_cmd=partial(get_conductance,
                                           lockin_left, AC_EXCITATION_R,
                                           float(configs.get('Gain settings',
-                                                            'ac factor left'))),
+                                                            'iv left gain'))),
                           set_cmd=None)
