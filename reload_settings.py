@@ -84,7 +84,7 @@ def used_channels():
     Return a list of currently labelled channels as ints.
     """
     l_chs = configs.get('QDac Channel Labels')
-    return [int(key) for key in l_chs.keys()]
+    return sorted([int(key) for key in l_chs.keys()])
 
 
 def used_voltage_params():
