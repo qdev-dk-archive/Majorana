@@ -245,7 +245,7 @@ lockin_left.add_parameter(name='g',
                           label='Sensor left g (e^2/h)',
                           unit='',
                           get_cmd=partial(get_conductance,
-                                          lockin_left, AC_EXCITATION_R,
+                                          lockin_left, AC_EXCITATION_L,
                                           float(configs.get('Gain settings',
                                                             'iv left gain'))),
                           set_cmd=None)
