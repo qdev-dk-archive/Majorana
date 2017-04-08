@@ -1,12 +1,16 @@
-
 from functools import partial
+import logging
+
 from qcodes.instrument_drivers.devices import VoltageDivider
+from qcodes.utils.validators import Numbers
 
 from qcodes.instrument.parameter import ManualParameter
 from qcodes.utils.validators import Enum
 
 from configparser import ConfigParser
 
+
+log = logging.getLogger(__name__)
 
 class ConfigFile:
     """
@@ -249,3 +253,32 @@ lockin_left.add_parameter(name='g',
                                           float(configs.get('Gain settings',
                                                             'iv left gain'))),
                           set_cmd=None)
+
+
+def set_ranges(qdac_channel_dictionary):
+    """
+    Set ranges to channels if:
+    - channels range are defined
+    - in the config file and if the channel is in use.
+
+    Args:
+      -qdac_channel_dictionary: dict of chan_id:chan parameter
+    """
+    ranges = configs.get('Channel ranges')
+    for chan_id in qdac_channel_dictionary:
+        try:
+            chan_range = ranges[str(chan_id)]
+        except KeyError:
+            log.debug("No range defined for chan %s. Using default.", chan_id)
+            continue
+
+        minmax = chan_range.split(" ")
+        if len(minmax) != 2:
+            raise ValueError("Expected: min max. Got {}".format(chan_range))
+        else:
+            rangemin = int(minmax[0])
+            rangemax = int(minmax[1])
+        channel = qdac_channel_dictionary[chan_id]
+        channel.set_validator(Numbers(rangemin, rangemax))
+
+set_ranges(QDAC)
