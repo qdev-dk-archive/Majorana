@@ -115,6 +115,8 @@ def print_voltages_all():
     parnames = sorted([par for par in qdac.parameters.keys() if par.endswith('_v')])
     for parname in parnames:
         print('{}: {} V'.format(parname, qdac.parameters[parname].get()))
+        
+    check_unused_qdac_channels()
 
 
 def qdac_slopes():
@@ -138,6 +140,12 @@ def qdac_slopes():
 
     return QDAC_SLOPES
 
+def check_unused_qdac_channels():
+    for ch in [el for i, el in enumerate(range(1,48)) if el not in used_channels()]:
+        if qdac.parameters['ch{:02}_v'.format(ch)].get() > 0.0:
+            lg.warning('Unused qDac channel not zero: channel {:02}'.format(ch))
+
+check_unused_qdac_channels()
 ##################################################
 # Initialise IV converters, voltage dividers, etc.
 
