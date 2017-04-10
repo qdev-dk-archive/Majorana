@@ -16,9 +16,11 @@ from qcodes.utils.validators import Enum
 from qcodes.utils.wrappers import init, _plot_setup, _save_individual_plots
 
 
-import logging as lg
+import logging
 import re
 import time
+
+init_log = logging.getLogger(__name__)
 
 # import T10_setup as t10
 from configparser import ConfigParser
@@ -36,8 +38,8 @@ CODING_MODE = False
 # NOTE (giulio) this line is super important for metadata
 # if one does not put the intruments in here there is no metadata!!
 if CODING_MODE:
-    lg.critical('You are currently in coding mode - instruments are not ' +
-                'bound to Station and hence not logged properly.')
+    init_log.critical('You are currently in coding mode - instruments are not ' +
+                      'bound to Station and hence not logged properly.')
 else:
     STATION = qc.Station(qdac, lockin_topo, lockin_right, lockin_left, keysight, zi)
 
