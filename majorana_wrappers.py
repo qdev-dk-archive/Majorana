@@ -9,7 +9,7 @@ from qcodes.utils.validators import Enum
 
 import re
 
-from qcodes.utils.wrappers import _plot_setup, _save_individual_plots
+from qcodes.utils.wrappers import _plot_setup, _save_individual_plots, do1d, do2d
 
 ##################################################
 # Helper functions and wrappers
@@ -130,30 +130,17 @@ def do1d_M(inst_set, start, stop, n_points, delay, *inst_meas, ramp_slope=None):
 
     """
     if str(inst_set._instrument.__class__) == "<class 'qcodes.instrument_drivers.QDev.QDac.QDac'>":
-        additional_delay_perPoint, _ = prepare_qdac(inst_set, start,
-                                                    stop, n_points, delay,
-                                                    ramp_slope)
-        delay += additional_delay_perPoint
+        channel_id = int(re.findall('\d+', inst_set.name)[0])
+        ramp_qdac(channel_id, start, ramp_slope)
 
-    loop = qc.Loop(inst_set.sweep(start, stop, num=n_points),
-                   delay).each(*inst_meas)
-    data = loop.get_data_set()
-    plot = _plot_setup(data, inst_meas)
 
-    try:
-        _ = loop.with_bg_task(plot.update, plot.save).run()
-    except KeyboardInterrupt:
-        print("Measurement Interrupted")
-
-    reset_qdac(inst_set)
-    _save_individual_plots(data, inst_meas)
+    plot, data = do1d(inst_set, start, stop, n_points, delay, *inst_meas)
 
     return plot, data
 
 
 def do2d_M(inst_set, start, stop, n_points, delay, inst_set2, start2, stop2,
-           n_points2, delay2, *inst_meas, ramp_slope1=None, ramp_slope2=None,
-           inter_loop_sleep_time=0):
+           n_points2, delay2, *inst_meas, ramp_slope1=None, ramp_slope2=None):
     """
     Args:
         inst_set:  Instrument to sweep over
@@ -174,47 +161,19 @@ def do2d_M(inst_set, start, stop, n_points, delay, inst_set2, start2, stop2,
     """
 
     if str(inst_set2._instrument.__class__) == "<class 'qcodes.instrument_drivers.QDev.QDac.QDac'>":
-        additional_delay_perPoint2, ramp_slope2 = prepare_qdac(inst_set2, start2,
-                                                               stop2,
-                                                               n_points2, delay2,
-                                                               ramp_slope2)
-        delay2 += additional_delay_perPoint2
-        # print('delay2: {}'.format(delay2))
-        try:
-            inter_loop_sleep_time += abs(stop2-start2)/ramp_slope2 + 0.05
-        except TypeError:
-            inter_loop_sleep_time += 0.05
+        channel_id = int(re.findall('\d+', inst_set2.name)[0])
+        ramp_qdac(channel_id, start, ramp_slope1)
 
     # FUGLY hack... but how to do it properly?
     if str(inst_set._instrument.__class__) == "<class 'qcodes.instrument_drivers.QDev.QDac.QDac'>":
-        additional_delay_perPoint, ramp_slope1 = prepare_qdac(inst_set, start, stop,
-                                                     n_points, delay, ramp_slope1)
-        delay = max(delay, inter_loop_sleep_time)
-        # print('delay1: {}'.format(delay))
+        channel_id = int(re.findall('\d+', inst_set.name)[0])
+        ramp_qdac(channel_id, start, ramp_slope1)
 
     for inst in inst_meas:
         if getattr(inst, "setpoints", False):
             raise ValueError("3d plotting is not supported")
 
-    qdac.ch03_v(3)
-    qdac.ch03_v(0)
-
-
-    loop = qc.Loop(inst_set.sweep(start, stop, num=n_points), delay).loop(inst_set2.sweep(start2, stop2, num=n_points2), delay2).each(
-             *inst_meas)
-            # qc.Task(inst_set2.set, start))
-            # qc.Wait(inter_loop_sleep_time)
-
-
-    data = loop.get_data_set()
-    plot = _plot_setup(data, inst_meas)
-    try:
-        _ = loop.with_bg_task(plot.update, plot.save).run()
-    except KeyboardInterrupt:
-        print("Measurement Interrupted")
-
-    reset_qdac([inst_set, inst_set2])
-    _save_individual_plots(data, inst_meas)
+    plot, data = do2d(inst_set, start, stop, n_points, delay, inst_set2, start2, stop2, n_points2, delay2, *inst_meas)
 
     return plot, data
 
