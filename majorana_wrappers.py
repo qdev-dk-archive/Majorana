@@ -151,7 +151,7 @@ def do1d_M(inst_set, start, stop, n_points, delay, *inst_meas, ramp_slope=None):
     return plot, data
 
 
-def do2d_MW(inst_set, start, stop, n_points, delay, inst_set2, start2, stop2,
+def do2d_M(inst_set, start, stop, n_points, delay, inst_set2, start2, stop2,
            n_points2, delay2, *inst_meas, ramp_slope1=None, ramp_slope2=None,
            inter_loop_sleep_time=0):
     """
@@ -217,3 +217,45 @@ def do2d_MW(inst_set, start, stop, n_points, delay, inst_set2, start2, stop2,
     _save_individual_plots(data, inst_meas)
 
     return plot, data
+
+
+def ramp_qdac(chan, target_voltage, slope=None):
+    """
+    Ramp a qdac channel. Blocking.
+
+    Args:
+        chan (int): channel number
+        target_voltage (float): Voltage to ramp to
+        slope (Optional[float]): The slope in (V/s). If None, a slope is
+            fetched from the QDAC dict
+    """
+
+    if slope is None:
+        try:
+            slope = QDAC_SLOPES[chan]
+        except KeyError:
+            raise ValueError('No slope found in QDAC_SLOPES. '
+                             'Please provide a slope!')
+
+    # Make the ramp blocking, so that we may unassign the slope
+    ramp_time = abs(qdac.parameters['ch{:02}_v'.format(chan)].get() -
+                    target_voltage)/slope + 0.03
+
+    qdac.parameters['ch{:02}_slope'.format(chan)].set(slope)
+    qdac.parameters['ch{:02}_v'.format(chan)].set(target_voltage)
+    sleep(ramp_time)
+    qdac.parameters['ch{:02}_slope'.format(chan)].set('Inf')
+
+
+def ramp_several_qdac_channels(loc, target_voltage, slope=None):
+    """
+    Ramp several QDac channels to the same value
+
+    Args:
+        loc (list): List of channels to ramp
+        target_voltage (float): Voltage to ramp to
+        slope (Optional[float]): The slope in (V/s). If None, a slope is
+            fetched from the QDAC dict
+    """
+    for ch in range(0,len(loc)):
+        ramp_qdac(loc[ch], target_voltage, slope)
