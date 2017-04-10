@@ -141,9 +141,11 @@ def qdac_slopes():
     return QDAC_SLOPES
 
 def check_unused_qdac_channels():
+    qdac._get_status()
     for ch in [el for i, el in enumerate(range(1,48)) if el not in used_channels()]:
-        if qdac.parameters['ch{:02}_v'.format(ch)].get() > 0.0:
-            lg.warning('Unused qDac channel not zero: channel {:02}'.format(ch))
+        temp_v = qdac.parameters['ch{:02}_v'.format(ch)].get_latest()
+        if temp_v > 0.0:
+            log.warning('Unused qDac channel not zero: channel {:02}: {}'.format(ch, temp_v))
 
 check_unused_qdac_channels()
 ##################################################
