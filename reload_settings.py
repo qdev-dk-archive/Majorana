@@ -111,6 +111,11 @@ def channel_labels():
 
     return output
 
+def print_voltages_all():
+    parnames = sorted([par for par in qdac.parameters.keys() if par.endswith('_v')])
+    for parname in parnames:
+        print('{}: {} V'.format(parname, qdac.parameters[parname].get()))
+
 
 def qdac_slopes():
     """
