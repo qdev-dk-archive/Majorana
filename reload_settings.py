@@ -294,6 +294,10 @@ def set_ranges(qdac_channel_dictionary):
             rangemin = int(minmax[0])
             rangemax = int(minmax[1])
         channel = qdac_channel_dictionary[chan_id]
-        channel.set_validator(Numbers(rangemin, rangemax))
+        if isinstance(channel, VoltageDivider):
+            # set the validator on the underlying qdac channel
+            channel.v1.set_validator(Numbers(rangemin, rangemax))
+        else:
+            channel.set_validator(Numbers(rangemin, rangemax))
 
 set_ranges(QDAC)
