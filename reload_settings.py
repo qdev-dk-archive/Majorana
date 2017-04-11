@@ -291,8 +291,8 @@ def set_ranges(qdac_channel_dictionary):
         if len(minmax) != 2:
             raise ValueError("Expected: min max. Got {}".format(chan_range))
         else:
-            rangemin = int(minmax[0])
-            rangemax = int(minmax[1])
+            rangemin = float(minmax[0])
+            rangemax = float(minmax[1])
         channel = qdac_channel_dictionary[chan_id]
         if isinstance(channel, VoltageDivider):
             # set the validator on the underlying qdac channel

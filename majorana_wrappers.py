@@ -123,7 +123,7 @@ def do1d_M(inst_set, start, stop, n_points, delay, *inst_meas, ramp_slope=None):
         division:  Spacing between values
         delay:  Delay at every step
         *inst_meas:  any number of instrument to measure
-        ramp_slope:
+        ramp_slope: 
 
     Returns:
         plot, data : returns the plot and the dataset
