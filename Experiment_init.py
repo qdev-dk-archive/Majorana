@@ -26,23 +26,25 @@ init_log = logging.getLogger(__name__)
 from configparser import ConfigParser
 
 # Initialisation of intruments
-qdac = QDac('qdac', 'ASRL6::INSTR', update_currents=False)
-lockin_topo = SR830('lockin_topo', 'GPIB10::7::INSTR')
-lockin_right = SR830('lockin_r', 'GPIB10::10::INSTR')
-lockin_left = SR830('lockin_l', 'GPIB10::14::INSTR')
-keysight = Keysight_33500B('keysight', 'TCPIP0::A-33522B-12403::inst0::INSTR')
-zi =  ZIUHFLI('ziuhfli', 'dev2189')
 
-CODING_MODE = False
+if __name__ == '__main__':
+    qdac = QDac('qdac', 'ASRL6::INSTR', update_currents=False)
+    lockin_topo = SR830('lockin_topo', 'GPIB10::7::INSTR')
+    lockin_right = SR830('lockin_r', 'GPIB10::10::INSTR')
+    lockin_left = SR830('lockin_l', 'GPIB10::14::INSTR')
+    keysight = Keysight_33500B('keysight', 'TCPIP0::A-33522B-12403::inst0::INSTR')
+    zi =  ZIUHFLI('ziuhfli', 'dev2189')
 
-# NOTE (giulio) this line is super important for metadata
-# if one does not put the intruments in here there is no metadata!!
-if CODING_MODE:
-    init_log.critical('You are currently in coding mode - instruments are not ' +
-                      'bound to Station and hence not logged properly.')
-else:
-    STATION = qc.Station(qdac, lockin_topo, lockin_right, lockin_left, keysight, zi)
+    CODING_MODE = False
 
-# Initialisation of the experiment
+    # NOTE (giulio) this line is super important for metadata
+    # if one does not put the intruments in here there is no metadata!!
+    if CODING_MODE:
+        init_log.critical('You are currently in coding mode - instruments are not ' +
+                          'bound to Station and hence not logged properly.')
+    else:
+        STATION = qc.Station(qdac, lockin_topo, lockin_right, lockin_left, keysight, zi)
 
-qc.init("./MajoQubit", "DRALD_001D4", STATION)
+    # Initialisation of the experiment
+
+    qc.init("./MajoQubit", "DRALD_001D4", STATION)

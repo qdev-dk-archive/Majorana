@@ -159,8 +159,8 @@ texinfo_documents = [
      'Miscellaneous'),
 ]
 
-
-
+# -- Options specific to qcodes Majorana ----------------------------------
+autodoc_mock_imports = ['zhinst', 'zhinst.utils']
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'https://docs.python.org/': None}

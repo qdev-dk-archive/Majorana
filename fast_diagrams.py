@@ -1,9 +1,15 @@
 import numpy as np
 from qcodes.instrument.parameter import ArrayParameter
 
+try:
+     zi
+except NameError:
+    print("zi not defined; the code will fail")
+    from unittest.mock import Mock
+    zi= Mock()
+
 
 class Scope_avg(ArrayParameter):
-
     def __init__(self, name, channel=1, **kwargs):
 
         super().__init__(name, shape=(1,), **kwargs)
@@ -33,23 +39,6 @@ class Scope_avg(ArrayParameter):
         return np.mean(data, 0)
 
 
-try:
-    zi.add_parameter('scope_avg_ch1',
-                     channel=1,
-                     label='',
-                     parameter_class=Scope_avg)
-except KeyError:
-    pass
-
-try:
-    zi.add_parameter('scope_avg_ch2',
-                     channel=2,
-                     label='',
-                     parameter_class=Scope_avg)
-except KeyError:
-    pass
-
-
 def prepare_measurement(keysight_low_V, keysight_high_V, scope_avger, qdac_fast_channel):
     """
     Args:
@@ -73,7 +62,6 @@ def prepare_measurement(keysight_low_V, keysight_high_V, scope_avger, qdac_fast_
     # zi.scope_avg_ch1.setpoint_names = ('keysight_voltage',)
     # zi.scope_avg_ch1.setpoint_labels = ('Keysight Voltage',)
     # zi.scope_avg_ch1.setpoint_units = ('V', )
-
 
 
 def fast_charge_diagram(keysight_channel, fast_v_start, fast_v_stop, n_averages,
@@ -128,7 +116,6 @@ def fast_charge_diagram(keysight_channel, fast_v_start, fast_v_stop, n_averages,
 
     # # obsolete next line
     # additional_sawtooth_amplitude = keysight_amplitude * ((trigger_holdoff)/scope_duration)
-
 
     keysight_amplitude = abs(fast_v_stop-fast_v_start)
     key_offset = fast_v_start + keysight_amplitude/2
@@ -235,3 +222,22 @@ def fast_charge_diagram(keysight_channel, fast_v_start, fast_v_stop, n_averages,
         print('Measurement interrupted.')
 
     return plot, data
+
+
+if __name__ == '__main__':
+
+    try:
+        zi.add_parameter('scope_avg_ch1',
+                         channel=1,
+                         label='',
+                         parameter_class=Scope_avg)
+    except KeyError:
+        pass
+
+    try:
+        zi.add_parameter('scope_avg_ch2',
+                         channel=2,
+                         label='',
+                         parameter_class=Scope_avg)
+    except KeyError:
+        pass

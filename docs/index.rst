@@ -8,20 +8,17 @@ Welcome to QCoDeS Majorana Wrappers's documentation!
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   
+   Experiment_init/index
+   majorana_wrapper/index
+   reload_settings/index
+   fast_diagram/index
+    
 
-
-
-Indices and tables
-==================
+Files
+=====
 
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
 
-
-Autodoc
-=======
-
-.. automodule:: majorana_wrappers
-  :members:
