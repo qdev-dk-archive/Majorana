@@ -108,6 +108,11 @@ html_static_path = ['_static']
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'QCoDeSMajoranaWrappersdoc'
 
+try:
+    import matplotlib
+    matplotlib.use('PS')
+except ImportError as e:
+        print(e)
 
 # -- Options for LaTeX output ---------------------------------------------
 
