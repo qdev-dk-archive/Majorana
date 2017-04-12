@@ -14,29 +14,17 @@ python:
  
 branches:
   only:
-    - master
+    - add_docs
 
 # signal that we are on travis
 # to disable things that expect an
 # X Display
-#
 env:
     - TRAVISCI=true
 # command to install dependencies
 install:
     - pip install --upgrade pip
-    - pip install -r requirements.txt
-    - pip install coverage pytest-cov pytest --upgrade
-    - pip install -e .
-# command to run tests
-script:
-    - cd qcodes
-    - py.test --cov=qcodes --cov-report xml --cov-config=.coveragerc
+    - pip install codacy-coverage sphinx sphinx_rtd_theme jsonschema sphinxcontrib-jsonschema
 
 after_success:
-    # install codacy coverage plugin and sphinx only on traivs
-    - pip install codacy-coverage sphinx sphinx_rtd_theme jsonschema sphinxcontrib-jsonschema
-    - python-codacy-coverage -r coverage.xml
-    - cd ..
-    # build the docs
     - make -f docs/Makefile gh-pages
