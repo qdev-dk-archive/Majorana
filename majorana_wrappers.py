@@ -17,7 +17,8 @@ from qcodes.utils.wrappers import _plot_setup, _save_individual_plots, do1d, do2
 
 def print_voltages():
     """
-    Print qDac voltages
+    Prints qDac voltages of channels in use. Prints the status of those
+    channels which were given a label in sample.config.
     """
 
     max_col_width = 38
@@ -29,9 +30,25 @@ def print_voltages():
         print(mssg)
 
 
+def print_voltages_all():
+    """
+    Prints voltages of all qDac channels, also those which do not have 
+    a label in sample.config
+    """
+    parnames = sorted([par for par in qdac.parameters.keys() if par.endswith('_v')])
+    for parname in parnames:
+        print('{}: {} V'.format(parname, qdac.parameters[parname].get()))
+        
+    check_unused_qdac_channels()
+
+
 def set_all_voltages(voltage):
     """
-    Set all AT SAMPLE voltages from QDac channels to the given voltage
+    Set all qDac voltages to the same value. Voltage dividers and attenuators
+    will be taken into account if they have been set.
+
+    Args:
+        voltage: voltage (V) value at sample, after dividers/attenuators 
     """
     for channel in range(1, 46):
         QDAC[channel].set(voltage)
@@ -39,10 +56,11 @@ def set_all_voltages(voltage):
 
 def _unassign_qdac_slope(sweep_parameter):
     """
-    Helper function for do1D and do2D to unassign QDac slopes
+    Helper function for do1D and do2D to unassign QDac slopes.
 
-    The sweep_parameter is either a qdac.chXX_v parameter OR
-    a VoltageDivider instance.
+    Args:
+        sweep_parameter: Either a qdac.chXX_v parameter OR
+            a VoltageDivider instance.
     """
 
     paramclass = str(sweep_parameter._instrument.__class__) 
@@ -62,8 +80,12 @@ def _unassign_qdac_slope(sweep_parameter):
 
 def reset_qdac(sweep_parameters):
     """
-    Reset the qdac channels (unassigns slopes)
-    Input amy be a list of sweep_parameter or a single one
+    Resets one or multiple qDac channel slopes.
+    Input any be a list of sweep_parameter or a single one
+
+    Args:
+        sweep_parameters: List or single value of either a
+            dac.chXX_v parameter or a VoltageDivider instance.
     """
     if not isinstance(sweep_parameters, list):
         sweep_parameters = [sweep_parameters]
@@ -78,17 +100,18 @@ def reset_qdac(sweep_parameters):
 def prepare_qdac(qdac_channel, start, stop, n_points, delay, ramp_slope):
     """
     Args:
-        inst_set:  Instrument to sweep over
-        start:  Start of sweep
-        stop:  End of sweep
-        division:  Spacing between values
-        delay:  Delay at every step
-        ramp_slope:
+        qdac_channel:   qdac.chXX_v parameter aka channel
+        start:  Start of sweep (voltage (V) in most cases)
+        stop:  End of sweep (voltage (V) in most cases))
+        n_points (int):   Number of data points in a sweep/loop
+        delay (s):  Delay between each data point
+        ramp_slope (V/s): qDac slope at which qdac_channel will be
+            ramped/swept
 
     Return:
-        additional_delay: Additional delay we need to add in the Loop
-                          in order to take into account the ramping
-                          time of the QDac
+        additional_delay: Additional delay needed to be added in Loop
+                          in order to take into account the QDac ramping
+                          time.
     """
 
     channel_id = int(re.findall('\d+', qdac_channel.name)[0])
@@ -116,14 +139,18 @@ def prepare_qdac(qdac_channel, start, stop, n_points, delay, ramp_slope):
 
 def do1d_M(inst_set, start, stop, n_points, delay, *inst_meas, ramp_slope=None):
     """
+    QDev Majorana wrapper of qc.Loop. Sweeps one parameter while measuring one
+    or more others.
+
     Args:
-        inst_set:  Instrument to sweep over
+        inst_set:   Instrument parameter to sweep over
         start:  Start of sweep
-        stop:  End of sweep
-        division:  Spacing between values
-        delay:  Delay at every step
-        *inst_meas:  any number of instrument to measure
-        ramp_slope: 
+        stop:   End of sweep
+        n_points (int):   Number of data points to acquire
+        delay (s):  Delay at every step
+        inst_meas:  Any number of instrument parameters to measure
+        ramp_slope (Optional[float]): QDac slope at which a qDac channel
+            should be swept. In (V/s).
 
     Returns:
         plot, data : returns the plot and the dataset
@@ -133,7 +160,6 @@ def do1d_M(inst_set, start, stop, n_points, delay, *inst_meas, ramp_slope=None):
         channel_id = int(re.findall('\d+', inst_set.name)[0])
         ramp_qdac(channel_id, start, ramp_slope)
 
-
     plot, data = do1d(inst_set, start, stop, n_points, delay, *inst_meas)
 
     return plot, data
@@ -142,19 +168,25 @@ def do1d_M(inst_set, start, stop, n_points, delay, *inst_meas, ramp_slope=None):
 def do2d_M(inst_set, start, stop, n_points, delay, inst_set2, start2, stop2,
            n_points2, delay2, *inst_meas, ramp_slope1=None, ramp_slope2=None):
     """
+    qDev Majorana wrapper of a two dimensional Loop.
+    Sweeps two parameters while measuring any number of instrument parameters.
+
     Args:
-        inst_set:  Instrument to sweep over
+        inst_set:  Instrument parameter to sweep over; slow axis
         start:  Start of sweep
         stop:  End of sweep
-        division:  Spacing between values
-        delay:  Delay at every step
-        inst_set_2:  Second instrument to sweep over
-        start_2:  Start of sweep for second intrument
-        stop_2:  End of sweep for second intrument
-        division_2:  Spacing between values for second intrument
-        delay_2:  Delay at every step for second intrument
-        *inst_meas:
-        ramp_slope:
+        n_points (int):  Number of data points in outer loop; slow axis
+        delay (s):  Delay between inner loops
+        inst_set_2:  Second instrument to sweep over; fast axis
+        start_2:  Start of sweep for second intsrument
+        stop_2:  End of sweep for second instrument
+        n_points2 (int):  Number of points of inner loop; slow axis
+        delay_2 (s):  Delay between points on slow axis
+        inst_meas: Any numnber of instrument parameters to measure
+        ramp_slope1 (Optional[float]): qDac slope at which a qDac parameter
+            (channel) should be swept; outer loop/slow axis. In (V/s).
+        ramp_slope2 (Optional[float]): qDac slope at which a qDac parameter
+            (channel) should be swept; inner loop/fast axis. In (V/s).
 
     Returns:
         plot, data : returns the plot and the dataset
@@ -180,13 +212,14 @@ def do2d_M(inst_set, start, stop, n_points, delay, inst_set2, start2, stop2,
 
 def ramp_qdac(chan, target_voltage, slope=None):
     """
-    Ramp a qdac channel. Blocking.
+    Ramps a qdac channel to the desired value. It waits until the value
+    blocks is reached aka blocking.
 
     Args:
-        chan (int): channel number
+        chan (int): Qdac channel number
         target_voltage (float): Voltage to ramp to
         slope (Optional[float]): The slope in (V/s). If None, a slope is
-            fetched from the QDAC dict
+            fetched from the QDAC dict.
     """
 
     if slope is None:
@@ -208,7 +241,8 @@ def ramp_qdac(chan, target_voltage, slope=None):
 
 def ramp_several_qdac_channels(loc, target_voltage, slope=None):
     """
-    Ramp several QDac channels to the same value
+    Ramp several QDac channels to the same value. Channels are ramped
+    sequentially. Blocking until all channels are at desired value.
 
     Args:
         loc (list): List of channels to ramp
@@ -216,5 +250,5 @@ def ramp_several_qdac_channels(loc, target_voltage, slope=None):
         slope (Optional[float]): The slope in (V/s). If None, a slope is
             fetched from the QDAC dict
     """
-    for ch in range(0,len(loc)):
+    for ch in range(0, len(loc)):
         ramp_qdac(loc[ch], target_voltage, slope)

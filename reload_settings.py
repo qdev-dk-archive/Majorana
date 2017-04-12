@@ -68,7 +68,10 @@ class ConfigFile:
 
 def bias_channels():
     """
-    A convenience function returning a list of bias channels.
+    A convenience function returning a list of qDac channels connected
+    to source-drain/bias gates of a sample.
+
+    Returns: List of bias channels. Currently there will be three.
     """
     bias_chan1 = configs.get('Channel Parameters', 'topo bias channel')
     bias_chan2 = configs.get('Channel Parameters', 'left sensor bias channel')
@@ -79,7 +82,12 @@ def bias_channels():
 
 def used_channels():
     """
-    Return a list of currently labelled channels as ints.
+    Convenience function to retrieve the qDac channels in use/labeled in the 
+    config file.
+
+    Returns:
+        A list of integers corresponding to qDac channels which are currently 
+        labeled in the config file.
     """
     l_chs = configs.get('QDac Channel Labels')
     return sorted([int(key) for key in l_chs.keys()])
@@ -87,7 +95,12 @@ def used_channels():
 
 def used_voltage_params():
     """
-    Returns a list of qdac voltage parameters for the used channels
+    Convenience function to retrieve qDac voltage parameters; qcodes 
+    parameters (qdac.ch0X_v) of qDac channels in use.
+
+    Returns:
+        A list of qDac voltage parameters for channels in use/having
+        a label in the config file.
     """
     chans = sorted(used_channels())
     voltages = [qdac.parameters['ch{:02}_v'.format(ii)] for ii in chans]
@@ -97,8 +110,11 @@ def used_voltage_params():
 
 def channel_labels():
     """
-    Returns a dict of the labelled channels. Key: channel number (int),
-    value: label (str)
+    Convenience function getting qDac channel labels from the config file.
+
+    Returns:
+        A dict of labelled channels.
+        Key: channel number (int), value: label (str)
     """
     labs = configs.get('QDac Channel Labels')
     output = dict(zip([int(key) for key in labs.keys()], labs.values()))
@@ -106,17 +122,13 @@ def channel_labels():
     return output
 
 
-def print_voltages_all():
-    parnames = sorted([par for par in qdac.parameters.keys() if par.endswith('_v')])
-    for parname in parnames:
-        print('{}: {} V'.format(parname, qdac.parameters[parname].get()))
-        
-    check_unused_qdac_channels()
-
-
 def qdac_slopes():
     """
-    Returns a dict with the QDac slopes defined in the config file
+    Convenience function reading qDac slopes from the config file and storing
+    them in a dict. 
+
+    Returns:
+    QDAC_SLOPES, a dict with the QDac slopes defined in the config file.
     """
     qdac_slope = float(configs.get('Ramp speeds',
                                    'max rampspeed qdac'))
@@ -137,6 +149,10 @@ def qdac_slopes():
 
 
 def check_unused_qdac_channels():
+    """
+    Convenience function checking whether unused qDac channels are
+    outputting voltage. Prints a warning if this is the case.
+    """
     qdac._get_status()
     for ch in [el for i, el in enumerate(range(1,48)) if el not in used_channels()]:
         temp_v = qdac.parameters['ch{:02}_v'.format(ch)].get_latest()
@@ -147,7 +163,11 @@ def check_unused_qdac_channels():
 # Adding a parameter for conductance measurement
 def get_conductance(lockin, ac_excitation, iv_conv):
     """
-    get_cmd for conductance parameter
+    Function computing conductance. It is the getter function (get_cmd) of
+    the conductance parameter of a lockin instrument.
+
+    Returns:
+        Conductance in e^2/h units
     """
     resistance_quantum = 25.818e3  # [Ohm]
     i = lockin.X() / iv_conv
@@ -158,12 +178,18 @@ def get_conductance(lockin, ac_excitation, iv_conv):
 
 def set_ranges(qdac_channel_dictionary):
     """
-    Set ranges to channels if:
-    - channels range are defined
-    - in the config file and if the channel is in use.
+    Function to set qDac channel safety ranges. They are set if
+    - channels ranges are defined in the config file (from where 
+        they are read in this function)
+    - if the channel is in use.
+
+    Those are software ranges only, it does not change the hardware ranges
+    on the qDac (validation through qcodes validators).
+    Dividers and attenuators are not taken into account.
+
 
     Args:
-      -qdac_channel_dictionary: dict of chan_id:chan parameter
+        qdac_channel_dictionary: dict of chan_id: chan parameter (QDAC)
     """
     ranges = configs.get('Channel ranges')
     for chan_id in qdac_channel_dictionary:
