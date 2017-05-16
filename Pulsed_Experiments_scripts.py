@@ -152,7 +152,7 @@ class PulseTime(StandardParameter):
         # change the width of the high time
         self.seq.element(self.pos).changeDuration(self.chan,
                                                   self.segname, width)
-        self.seq.
+
         package = self.seq.outputForAWGFile()
         self.awg.make_send_and_load_awg_file(*package[:],
                                              channels=self.awgchannels)
