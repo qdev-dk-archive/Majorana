@@ -1,12 +1,7 @@
-from functools import partial
 import logging
 
 import qcodes as qc
-from qcodes.instrument_drivers.devices import VoltageDivider
 from qcodes.utils.validators import Numbers
-
-from qcodes.instrument.parameter import ManualParameter
-from qcodes.utils.validators import Enum
 
 from .configreader import Config
 
