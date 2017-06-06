@@ -10,4 +10,4 @@ The repository contains the following files:
 * fast_diagrams.py: Contains the `fast_charge_diagram` function. 
 
 The refactoring is based on the following idea: there are two global objects, the station and the config. Everything else
-should be a function in a module, a function potentially digging into those two glaobel objects.
+should be a function in a module, a function potentially digging into those two global objects.
