@@ -73,7 +73,8 @@ def print_voltages_all():
     station = qc.Station.default
     qdac = station['qdac']
 
-    parnames = sorted([par for par in qdac.parameters.keys() if par.endswith('_v')])
+    parnames = sorted([par for par in qdac.parameters.keys()
+                       if par.endswith('_v')])
     for parname in parnames:
         print('{}: {} V'.format(parname, qdac.parameters[parname].get()))
 
@@ -84,31 +85,41 @@ def qdac_slopes():
     """
     Returns a dict with the QDac slopes defined in the config file
     """
-    qdac_slope = float(configs.get('Ramp speeds',
-                                   'max rampspeed qdac'))
-    bg_slope = float(configs.get('Ramp speeds',
-                                 'max rampspeed bg'))
-    bias_slope = float(configs.get('Ramp speeds',
-                                   'max rampspeed bias'))
+
+    config = Config.default
+
+    qdac_slope = float(config.get('Ramp speeds',
+                                  'max rampspeed qdac'))
+    bg_slope = float(config.get('Ramp speeds',
+                                'max rampspeed bg'))
+    bias_slope = float(config.get('Ramp speeds',
+                                  'max rampspeed bias'))
 
     QDAC_SLOPES = dict(zip(used_channels(),
                            len(used_channels())*[qdac_slope]))
 
-    QDAC_SLOPES[int(configs.get('Channel Parameters',
-                                'backgate channel'))] = bias_slope
+    QDAC_SLOPES[int(config.get('Channel Parameters',
+                               'backgate channel'))] = bias_slope
     for ii in bias_channels():
         QDAC_SLOPES[ii] = bias_slope
 
     return QDAC_SLOPES
 
+
 def check_unused_qdac_channels():
+    """
+    Check whether any UNASSIGNED QDac channel has a non-zero voltage
+    """
+    station = qc.Station.default
+
+    qdac = station['qdac']
+
     qdac._get_status()
-    for ch in [el for i, el in enumerate(range(1,48)) if el not in used_channels()]:
+    for ch in [el for el in range(1, 48) if el not in used_channels()]:
         temp_v = qdac.parameters['ch{:02}_v'.format(ch)].get_latest()
         if temp_v > 0.0:
-            log.warning('Unused qDac channel not zero: channel {:02}: {}'.format(ch, temp_v))
-
-check_unused_qdac_channels()
+            log.warning('Unused qDac channel not zero: channel '
+                        '{:02}: {}'.format(ch, temp_v))
 
 
 def reload_SR830_settings():
@@ -140,64 +151,34 @@ def reload_SR830_settings():
     lockin_left.ivgain = float(configs.get('Gain settings',
                                            'iv left gain'))
 
-    lockin_topo.dcfactor = float(configs.get('Gain settings',
-                                             'dc factor topo'))
-    lockin_right.dcfactor = float(configs.get('Gain settings',
-                                              'dc factor right'))
-    lockin_left.dcfactor = float(configs.get('Gain settings',
-                                             'dc factor left'))
 
-##################################################
-# The QDAC dict exposed to the user. This dict contains a mapping from
-# channel number to QCoDeS object whose 'get' method returns the voltage
-# AT SAMPLE (attenuation not taken into account yet) from that channel
-
-# first initialise it with the 'raw' voltages
-QDAC = dict(zip(used_channels(), used_voltage_params()))
-
-# User defined special channels with special names exposed to the user
-topo_bias = VoltageDivider(QDAC[int(configs.get('Channel Parameters',
-                                                'topo bias channel'))],
-                           float(configs.get('Gain settings',
-                                             'dc factor topo')))
-sens_r_bias = VoltageDivider(QDAC[int(configs.get('Channel Parameters',
-                                                  'right sensor bias channel'))],
-                             float(configs.get('Gain settings',
-                                               'dc factor right')))
-sens_l_bias = VoltageDivider(QDAC[int(configs.get('Channel Parameters',
-                                                  'left sensor bias channel'))],
-                             float(configs.get('Gain settings',
-                                               'dc factor left')))
-# update the QDAC dict with these as well
-QDAC[int(configs.get('Channel Parameters', 'topo bias channel'))] = topo_bias
-QDAC[int(configs.get('Channel Parameters', 'left sensor bias channel'))] = sens_l_bias
-QDAC[int(configs.get('Channel Parameters', 'right sensor bias channel'))] = sens_r_bias
-
-# now overwrite the channel labels
-for ch in used_channels():
-    QDAC[ch].label = channel_labels()[ch]
-
-
-# A dictionary with max ramp speed for qDac channels.
-# Bias channels, backgate and cutters/plungers have their own values
-QDAC_SLOPES = qdac_slopes()
-
-
-def set_ranges(qdac_channel_dictionary):
+def reload_QDAC_settings():
     """
-    Set ranges to channels if:
-    - channels range are defined
-    - in the config file and if the channel is in use.
-
-    Args:
-      -qdac_channel_dictionary: dict of chan_id:chan parameter
+    Function to update the qdac based on the configuration file
     """
-    ranges = configs.get('Channel ranges')
-    for chan_id in qdac_channel_dictionary:
+
+    config = Config.default
+    station = qc.Station.default
+
+    # Update the voltage dividers
+    topo_dc = float(config.get('Gain settings',
+                               'dc factor topo'))
+    sens_r_dc = float(config.get('Gain settings',
+                                 'dc factor right'))
+    sens_l_dc = float(config.get('Gain settings',
+                                 'dc factor left'))
+    qdac = station['qdac']
+    qdac.topo_bias.division_value = topo_dc
+    qdac.sens_r_bias.division_value = sens_r_dc
+    qdac.sens_l_bias.division_value = sens_l_dc
+
+    # Set the range validators
+    # NB: This is the voltage AT the QDac, BEFORE votlage dividers
+    ranges = config.get('Channel ranges')
+    for chan in range(1, 49):
         try:
-            chan_range = ranges[str(chan_id)]
+            chan_range = ranges[str(chan)]
         except KeyError:
-            log.debug("No range defined for chan %s. Using default.", chan_id)
             continue
 
         minmax = chan_range.split(" ")
@@ -206,11 +187,11 @@ def set_ranges(qdac_channel_dictionary):
         else:
             rangemin = float(minmax[0])
             rangemax = float(minmax[1])
-        channel = qdac_channel_dictionary[chan_id]
-        if isinstance(channel, VoltageDivider):
-            # set the validator on the underlying qdac channel
-            channel.v1.set_validator(Numbers(rangemin, rangemax))
-        else:
-            channel.set_validator(Numbers(rangemin, rangemax))
 
-set_ranges(QDAC)
+        vldtr = Numbers(rangemin, rangemax)
+        qdac.parameters['ch{:02}_v'.format(chan)].set_validator(vldtr)
+
+    # Update the channels' labels
+    labels = channel_labels()
+    for chan, label in labels.items():
+        qdac.parameters['ch{:02}_v'.format(chan)].label = label
