@@ -1,5 +1,4 @@
 import logging
-
 import qcodes as qc
 from qcodes.utils.validators import Numbers
 

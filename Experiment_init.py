@@ -10,7 +10,7 @@ from qcodes.instrument_drivers.Keysight.Keysight_34465A import Keysight_34465A
 from qcodes.instrument_drivers.ZI.ZIUHFLI import ZIUHFLI
 from qcodes.instrument_drivers.devices import VoltageDivider
 
-from .configreader import Config
+from configreader import Config
 
 from qcodes.instrument.parameter import ManualParameter
 from qcodes.instrument.parameter import StandardParameter
@@ -37,7 +37,7 @@ from qcodes.instrument_drivers.oxford.mercuryiPS import MercuryiPS
 init_log = logging.getLogger(__name__)
 
 # import T10_setup as t10
-config = Config('./MajoQubit/sample.config')
+config = Config('A:\qcodes_experiments\modules\Majorana\sample.config')
 
 # Subclass the SR830
 
@@ -52,7 +52,7 @@ class SR830_T10(SR830):
 
         # using the vocabulary of the config file
         self.ivgain = 1
-        self.acfactor = 1
+        self.__acf = 1
 
         self.amplitude_true = VoltageDivider(self.amplitude,
                                              self.acfactor)
@@ -60,8 +60,8 @@ class SR830_T10(SR830):
         self.add_parameter('g',
                            label='{} conductance'.format(self.name),
                            # use lambda for late binding
-                           get_cmd=lambda : self.get_conductance(self.amplitude_true(),
-                                                                 self.ivgain),
+                           get_cmd=lambda: self.get_conductance(self.amplitude_true(),
+                                                                self.ivgain),
                            unit='e^2/h',
                            get_parser=float)
 
