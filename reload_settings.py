@@ -241,6 +241,22 @@ try:
 except KeyError:
     pass
 
+def get_current(dmm, iv_conv):
+    """get_cmd for dmm readout of IV_TAMP parameter"""
+    return dmm.volt()/iv_conv*1E12
+
+# Delete ivconv parameters, if they are already defined
+try:
+    del keysightdmm_top.parameters['ivconv']
+except KeyError:
+    pass
+
+keysightdmm_top.add_parameter(name='ivconv',
+                              label='Current (pA)',
+                              unit='',
+                              get_cmd=partial(get_current, keysightdmm_top, 
+                              float(configs.get('Gain settings', 'iv topo gain'))),
+                              set_cmd=None)
 
 lockin_topo.add_parameter(name='g',
                           label='Topo g (e^2/h)',

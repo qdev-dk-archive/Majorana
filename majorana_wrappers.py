@@ -9,6 +9,9 @@ from qcodes.utils.validators import Enum
 
 import re
 
+import logging
+import os
+logging.basicConfig(filename=os.path.join(os.getcwd(), 'pythonlog.txt'), level=logging.DEBUG)
 from qcodes.utils.wrappers import _plot_setup, _save_individual_plots, do1d, do2d
 
 ##################################################
