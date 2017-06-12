@@ -1,6 +1,7 @@
 # Module containing the config file reader class
 from configparser import ConfigParser
 
+
 class Config:
     """
     Object to be used for interacting with the config file.
@@ -25,7 +26,7 @@ class Config:
         # If this is the default config object, we make it available as a
         # class method.
         if isdefault:
-            default = self
+            Config.default = self
 
         self._filename = filename
         self._cfg = ConfigParser()

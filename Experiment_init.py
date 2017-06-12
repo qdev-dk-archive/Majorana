@@ -39,6 +39,7 @@ init_log = logging.getLogger(__name__)
 # import T10_setup as t10
 config = Config('A:\qcodes_experiments\modules\Majorana\sample.config')
 
+
 # Subclass the SR830
 
 
