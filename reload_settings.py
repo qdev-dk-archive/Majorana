@@ -1,81 +1,20 @@
-from functools import partial
 import logging
 
-from qcodes.instrument_drivers.devices import VoltageDivider
+import qcodes as qc
 from qcodes.utils.validators import Numbers
 
-from qcodes.instrument.parameter import ManualParameter
-from qcodes.utils.validators import Enum
-
-from configparser import ConfigParser
-
+from .configreader import Config
 
 log = logging.getLogger(__name__)
-
-class ConfigFile:
-    """
-    Object to be used for interacting with the config file.
-    Currently the config file MUST have the name 'sample.config'
-
-    The ConfigFile is constantly synced with the config file on disk
-    (provided that only this object was used to change the file)
-    """
-
-    def __init__(self):
-        self._filename = 'modules/Majorana/sample.config'
-        self._cfg = ConfigParser()
-        self._load()
-
-    def _load(self):
-        self._cfg.read(self._filename)
-
-    def reload(self):
-        self._load()
-
-    def get(self, section, field=None):
-        """
-        Gets the value of the specified section/field.
-        If no field is specified, the entire section is returned
-        as a dict.
-
-        Example: ConfigFile.get('QDac Channel Labels', '2')
-        """
-        # Try to be really clever about the input
-        if not isinstance(field, str) and (field is not None):
-            field = '{}'.format(field)
-
-        if field is None:
-            output = dict(zip(self._cfg[section].keys(),
-                              self._cfg[section].values()))
-        else:
-            output = self._cfg[section][field]
-
-        return output
-
-    def set(self, section, field, value):
-        """
-        Set a value in the config file.
-        Immediately writes to disk.
-        """
-        if not isinstance(value, str):
-            value = '{}'.format(value)
-
-        self._cfg[section][field] = value
-
-        with open(self._filename, 'w') as configfile:
-            self._cfg.write(configfile)
-
-
-##################################################
-# References to config files
-
-configs = ConfigFile()
 
 
 def bias_channels():
     """
     A convenience function returning a list of bias channels.
     """
+
+    configs = Config.default
+
     bias_chan1 = configs.get('Channel Parameters', 'topo bias channel')
     bias_chan2 = configs.get('Channel Parameters', 'left sensor bias channel')
     bias_chan3 = configs.get('Channel Parameters', 'right sensor bias channel')
@@ -87,6 +26,9 @@ def used_channels():
     """
     Return a list of currently labelled channels as ints.
     """
+
+    configs = Config.default
+
     l_chs = configs.get('QDac Channel Labels')
     return sorted([int(key) for key in l_chs.keys()])
 
@@ -95,6 +37,10 @@ def used_voltage_params():
     """
     Returns a list of qdac voltage parameters for the used channels
     """
+    station = qc.Station.default
+
+    qdac = station['qdac']
+
     chans = sorted(used_channels())
     voltages = [qdac.parameters['ch{:02}_v'.format(ii)] for ii in chans]
 
@@ -106,16 +52,27 @@ def channel_labels():
     Returns a dict of the labelled channels. Key: channel number (int),
     value: label (str)
     """
+    configs = Config.default
+
     labs = configs.get('QDac Channel Labels')
     output = dict(zip([int(key) for key in labs.keys()], labs.values()))
 
     return output
 
+
 def print_voltages_all():
-    parnames = sorted([par for par in qdac.parameters.keys() if par.endswith('_v')])
+    """
+    Convenience function for printing all qdac voltages
+    """
+
+    station = qc.Station.default
+    qdac = station['qdac']
+
+    parnames = sorted([par for par in qdac.parameters.keys()
+                       if par.endswith('_v')])
     for parname in parnames:
         print('{}: {} V'.format(parname, qdac.parameters[parname].get()))
-        
+
     check_unused_qdac_channels()
 
 
@@ -123,184 +80,114 @@ def qdac_slopes():
     """
     Returns a dict with the QDac slopes defined in the config file
     """
-    qdac_slope = float(configs.get('Ramp speeds',
-                                   'max rampspeed qdac'))
-    bg_slope = float(configs.get('Ramp speeds',
-                                 'max rampspeed bg'))
-    bias_slope = float(configs.get('Ramp speeds',
-                                   'max rampspeed bias'))
+
+    config = Config.default
+
+    qdac_slope = float(config.get('Ramp speeds',
+                                  'max rampspeed qdac'))
+    bg_slope = float(config.get('Ramp speeds',
+                                'max rampspeed bg'))
+    bias_slope = float(config.get('Ramp speeds',
+                                  'max rampspeed bias'))
 
     QDAC_SLOPES = dict(zip(used_channels(),
                            len(used_channels())*[qdac_slope]))
 
-    QDAC_SLOPES[int(configs.get('Channel Parameters',
-                                'backgate channel'))] = bias_slope
+    QDAC_SLOPES[int(config.get('Channel Parameters',
+                               'backgate channel'))] = bias_slope
     for ii in bias_channels():
         QDAC_SLOPES[ii] = bias_slope
 
     return QDAC_SLOPES
 
+
 def check_unused_qdac_channels():
+    """
+    Check whether any UNASSIGNED QDac channel has a non-zero voltage
+    """
+    station = qc.Station.default
+
+    qdac = station['qdac']
+
     qdac._get_status()
-    for ch in [el for i, el in enumerate(range(1,48)) if el not in used_channels()]:
+    for ch in [el for el in range(1, 48) if el not in used_channels()]:
         temp_v = qdac.parameters['ch{:02}_v'.format(ch)].get_latest()
         if temp_v > 0.0:
-            log.warning('Unused qDac channel not zero: channel {:02}: {}'.format(ch, temp_v))
-
-check_unused_qdac_channels()
-##################################################
-# Initialise IV converters, voltage dividers, etc.
-
-IV_CONV_GAIN_TOPO = ManualParameter('IVgain topo bias',
-                                    unit='V/A',
-                                    vals=Enum(1e5, 1e6, 1e7, 1e8, 1e9))
-IV_CONV_GAIN_TOPO(float(configs.get('Gain settings', 'iv topo gain')))
-
-IV_CONV_GAIN_R = ManualParameter('IVgain sens right',
-                                 unit='V/A',
-                                 vals=Enum(1e5, 1e6, 1e7, 1e8, 1e9))
-IV_CONV_GAIN_R(float(configs.get('Gain settings', 'iv right gain')))
-
-IV_CONV_GAIN_L = ManualParameter('IVgain sens left',
-                                 unit='V/A',
-                                 vals=Enum(1e5, 1e6, 1e7, 1e8, 1e9))
-IV_CONV_GAIN_L(float(configs.get('Gain settings', 'iv left gain')))
+            log.warning('Unused qDac channel not zero: channel '
+                        '{:02}: {}'.format(ch, temp_v))
 
 
-AC_EXCITATION_TOPO = VoltageDivider(lockin_topo.amplitude,
-                                    float(configs.get('Gain settings',
-                                                'ac factor topo')))
-AC_EXCITATION_R = VoltageDivider(lockin_right.amplitude,
-                                 float(configs.get('Gain settings',
-                                             'ac factor right')))
-AC_EXCITATION_L = VoltageDivider(lockin_left.amplitude,
-                                  float(configs.get('Gain settings',
-                                             'ac factor left')))
-
-
-##################################################
-# The QDAC dict exposed to the user. This dict contains a mapping from
-# channel number to QCoDeS object whose 'get' method returns the voltage
-# AT SAMPLE (attenuation not taken into account yet) from that channel
-
-# first initialise it with the 'raw' voltages
-QDAC = dict(zip(used_channels(), used_voltage_params()))
-
-# User defined special channels with special names exposed to the user
-topo_bias = VoltageDivider(QDAC[int(configs.get('Channel Parameters',
-                                                'topo bias channel'))],
-                           float(configs.get('Gain settings',
-                                             'dc factor topo')))
-sens_r_bias = VoltageDivider(QDAC[int(configs.get('Channel Parameters',
-                                                  'right sensor bias channel'))],
-                             float(configs.get('Gain settings',
-                                               'dc factor right')))
-sens_l_bias = VoltageDivider(QDAC[int(configs.get('Channel Parameters',
-                                                  'left sensor bias channel'))],
-                             float(configs.get('Gain settings',
-                                               'dc factor left')))
-# update the QDAC dict with these as well
-QDAC[int(configs.get('Channel Parameters', 'topo bias channel'))] = topo_bias
-QDAC[int(configs.get('Channel Parameters', 'left sensor bias channel'))] = sens_l_bias
-QDAC[int(configs.get('Channel Parameters', 'right sensor bias channel'))] = sens_r_bias
-
-# now overwrite the channel labels
-for ch in used_channels():
-    QDAC[ch].label = channel_labels()[ch]
-
-
-# A dictionary with max ramp speed for qDac channels.
-# Bias channels, backgate and cutters/plungers have their own values
-QDAC_SLOPES = qdac_slopes()
-
-# Adding a parameter for conductance measurement
-def get_conductance(lockin, ac_excitation, iv_conv):
+def reload_DMM_settings():
     """
-    get_cmd for conductance parameter
+    Function to reload DMMs.
     """
-    resistance_quantum = 25.818e3  # [Ohm]
-    i = lockin.X() / iv_conv
-    # ac excitation voltage at the sample
-    v_sample = ac_excitation()
-    return (i/v_sample)*resistance_quantum
+
+    # Get the two global objects containing the instruments and settings
+    station = qc.Station.default
+    configs = Config.default
+
+    dmm_top = station['keysight_dmm_top']
+
+    dmm_top.iv_conv = float(configs.get('Gain settings', 'iv topo gain'))
 
 
-# Delete conductance parameters, if they are already defined
-try:
-    del lockin_topo.parameters['g']
-except KeyError:
-    pass
-
-try:
-    del lockin_right.parameters['g']
-except KeyError:
-    pass
-
-try:
-    del lockin_left.parameters['g']
-except KeyError:
-    pass
-
-def get_current(dmm, iv_conv):
-    """get_cmd for dmm readout of IV_TAMP parameter"""
-    return dmm.volt()/iv_conv*1E12
-
-# Delete ivconv parameters, if they are already defined
-try:
-    del keysightdmm_top.parameters['ivconv']
-except KeyError:
-    pass
-
-keysightdmm_top.add_parameter(name='ivconv',
-                              label='Current (pA)',
-                              unit='',
-                              get_cmd=partial(get_current, keysightdmm_top, 
-                              float(configs.get('Gain settings', 'iv topo gain'))),
-                              set_cmd=None)
-
-lockin_topo.add_parameter(name='g',
-                          label='Topo g (e^2/h)',
-                          unit='',
-                          get_cmd=partial(get_conductance,
-                                          lockin_topo, AC_EXCITATION_TOPO,
-                                          float(configs.get('Gain settings',
-                                                            'iv topo gain'))),
-                          set_cmd=None)
-
-lockin_right.add_parameter(name='g',
-                           label='Sensor right g (e^2/h)',
-                           unit='',
-                           get_cmd=partial(get_conductance,
-                                           lockin_right, AC_EXCITATION_R,
-                                           float(configs.get('Gain settings',
-                                                             'iv right gain'))),
-                           set_cmd=None)
-
-lockin_left.add_parameter(name='g',
-                          label='Sensor left g (e^2/h)',
-                          unit='',
-                          get_cmd=partial(get_conductance,
-                                          lockin_left, AC_EXCITATION_L,
-                                          float(configs.get('Gain settings',
-                                                            'iv left gain'))),
-                          set_cmd=None)
-
-
-def set_ranges(qdac_channel_dictionary):
+def reload_SR830_settings():
     """
-    Set ranges to channels if:
-    - channels range are defined
-    - in the config file and if the channel is in use.
-
-    Args:
-      -qdac_channel_dictionary: dict of chan_id:chan parameter
+    Function to update the SR830 voltage divider values based on the conf. file
     """
-    ranges = configs.get('Channel ranges')
-    for chan_id in qdac_channel_dictionary:
+
+    # Get the two global objects containing the instruments and settings
+    station = qc.Station.default
+    configs = Config.default
+
+    # one could put in some validation here if wanted
+
+    lockin_topo = station['lockin_topo']
+    lockin_right = station['lockin_right']
+    lockin_left = station['lockin_left']
+
+    lockin_topo.acfactor = float(configs.get('Gain settings',
+                                             'ac factor topo'))
+    lockin_right.acfactor = float(configs.get('Gain settings',
+                                              'ac factor right'))
+    lockin_left.acfactor = float(configs.get('Gain settings',
+                                             'ac factor left'))
+
+    lockin_topo.ivgain = float(configs.get('Gain settings',
+                                           'iv topo gain'))
+    lockin_right.ivgain = float(configs.get('Gain settings',
+                                            'iv right gain'))
+    lockin_left.ivgain = float(configs.get('Gain settings',
+                                           'iv left gain'))
+
+
+def reload_QDAC_settings():
+    """
+    Function to update the qdac based on the configuration file
+    """
+
+    config = Config.default
+    station = qc.Station.default
+
+    # Update the voltage dividers
+    topo_dc = float(config.get('Gain settings',
+                               'dc factor topo'))
+    sens_r_dc = float(config.get('Gain settings',
+                                 'dc factor right'))
+    sens_l_dc = float(config.get('Gain settings',
+                                 'dc factor left'))
+    qdac = station['qdac']
+    qdac.topo_bias.division_value = topo_dc
+    qdac.sens_r_bias.division_value = sens_r_dc
+    qdac.sens_l_bias.division_value = sens_l_dc
+
+    # Set the range validators
+    # NB: This is the voltage AT the QDac, BEFORE votlage dividers
+    ranges = config.get('Channel ranges')
+    for chan in range(1, 49):
         try:
-            chan_range = ranges[str(chan_id)]
+            chan_range = ranges[str(chan)]
         except KeyError:
-            log.debug("No range defined for chan %s. Using default.", chan_id)
             continue
 
         minmax = chan_range.split(" ")
@@ -309,11 +196,11 @@ def set_ranges(qdac_channel_dictionary):
         else:
             rangemin = float(minmax[0])
             rangemax = float(minmax[1])
-        channel = qdac_channel_dictionary[chan_id]
-        if isinstance(channel, VoltageDivider):
-            # set the validator on the underlying qdac channel
-            channel.v1.set_validator(Numbers(rangemin, rangemax))
-        else:
-            channel.set_validator(Numbers(rangemin, rangemax))
 
-set_ranges(QDAC)
+        vldtr = Numbers(rangemin, rangemax)
+        qdac.parameters['ch{:02}_v'.format(chan)].set_validator(vldtr)
+
+    # Update the channels' labels
+    labels = channel_labels()
+    for chan, label in labels.items():
+        qdac.parameters['ch{:02}_v'.format(chan)].label = label

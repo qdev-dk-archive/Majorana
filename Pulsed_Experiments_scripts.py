@@ -488,3 +488,27 @@ def doPulsedExperiment(fast_axis=None, slow_axis=None,
     ramp_avg._instrument = awg
 
     do1d(pulseTime, slow_start, slow_stop, slow_npts, 0, ramp_avg)
+
+
+def showPulsedExperiment(fast_npts=None,
+                         hightime=None,
+                         meastime=None,
+                         cycletime=None,
+                         transfertime=None,
+                         pulsehigh=None,
+                         trig_delay=None):
+    """
+    Function to visualise the pulsed experiment
+    """
+
+    seq = _DPE_makeSequence(hightime=hightime,
+                            trig_delay=trig_delay,
+                            meastime=meastime,
+                            prewaittime=transfertime,
+                            cycletime=cycletime,
+                            no_of_pulses=fast_npts,
+                            pulsehigh=pulsehigh,
+                            SR=1e9, segname='high')
+
+
+    seq.plotSequence()
