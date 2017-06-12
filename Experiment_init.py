@@ -156,9 +156,9 @@ keysightgen_left = Keysight_33500B('keysight_gen_left', 'TCPIP0::192.168.15.101:
 keysightgen_mid = Keysight_33500B('keysighDRt_gen_mid', 'TCPIP0::192.168.15.114::inst0::INSTR')
 keysightgen_right = Keysight_33500B('keysight_gen_right', 'TCPIP0::192.168.15.109::inst0::INSTR')
 
-keysightdmm_top = Keysight_34465A('keysight_dmm_top', 'TCPIP0::192.168.15.111::inst0::INSTR')
-keysightdmm_mid = Keysight_34465A('keysight_dmm_mid', 'TCPIP0::192.168.15.112::inst0::INSTR')
-keysightdmm_bot = Keysight_34465A('keysight_dmm_bot', 'TCPIP0::192.168.15.113::inst0::INSTR')
+keysightdmm_top = Keysight_34465A_T10('keysight_dmm_top', 'TCPIP0::192.168.15.111::inst0::INSTR')
+keysightdmm_mid = Keysight_34465A_T10('keysight_dmm_mid', 'TCPIP0::192.168.15.112::inst0::INSTR')
+keysightdmm_bot = Keysight_34465A_T10('keysight_dmm_bot', 'TCPIP0::192.168.15.113::inst0::INSTR')
 
 #keithleytop=keith.Keithley_2600('keithley_top', 'TCPIP0::192.168.15.116::inst0::INSTR',"a,b")
 keithleybot=keith.Keithley_2600('keithley_bot', 'TCPIP0::192.168.15.115::inst0::INSTR',"a,b")
