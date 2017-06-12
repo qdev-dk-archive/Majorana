@@ -39,7 +39,6 @@ class SR830_T10(SR830):
         # using the vocabulary of the config file
         self.ivgain = 1
         self.acfactor = 1
-        self.dcfactor = 1
 
         self.amplitude_true = VoltageDivider(self.amplitude,
                                              self.acfactor)
@@ -67,22 +66,58 @@ class SR830_T10(SR830):
     def acfactor(self):
         return self.__acf
 
-    @voltagegain.setter
-    def voltagegain(self, acfactor):
+    @acfactor.setter
+    def acfactor(self, acfactor):
         self.__acf = acfactor
         self.amplitude_true.division_value = acfactor
 
 
+# Subclass the QDAC
+
+
+class QDAC_T10(QDac):
+    """
+    A QDac with three voltage dividers
+    """
+    def __init__(self, name, address, config, **kwargs):
+        super().__init__(name, address, **kwargs)
+
+        # Define the named channels
+
+        topo_channel = int(config.get('Channel Parameters',
+                                      'topo bias channel'))
+        topo_channel = self.parameters['ch{:02}_v'.format(topo_channel)]
+
+        sens_r_channel = int(config.get('Channel Parameters',
+                                        'right sensor bias channel'))
+        sens_r_channel = self.parameters['ch{:02}_v'.format(sens_r_channel)]
+
+        sens_l_channel = int(config.get('Channel Parameters',
+                                        'left sensor bias channel'))
+        sens_l_channel = self.parameters['ch{:02}_v'.format(sens_l_channel)]
+
+        self.topo_bias = VoltageDivider(topo_channel,
+                                        float(config.get('Gain settings',
+                                                         'dc factor topo')))
+        self.sens_r_bias = VoltageDivider(sens_r_channel,
+                                          float(config.get('Gain settings',
+                                                           'dc factor right')))
+        self.sens_l_bias = VoltageDivider(sens_l_channel,
+                                          float(config.get('Gain settings',
+                                                           'dc factor left')))
+
+
 # Initialisation of intruments
-qdac = QDac('qdac', 'ASRL6::INSTR', update_currents=False)
+qdac = QDAC_T10('qdac', 'ASRL6::INSTR', config, update_currents=False)
 lockin_topo = SR830_T10('lockin_topo', 'GPIB10::7::INSTR')
 lockin_right = SR830_T10('lockin_r', 'GPIB10::10::INSTR')
 lockin_left = SR830_T10('lockin_l', 'GPIB10::14::INSTR')
 keysight = Keysight_33500B('keysight', 'TCPIP0::A-33522B-12403::inst0::INSTR')
-zi =  ZIUHFLI('ziuhfli', 'dev2189')
+zi = ZIUHFLI('ziuhfli', 'dev2189')
 
-STATION = qc.Station(qdac, lockin_topo, lockin_right, lockin_left, keysight, zi)
+STATION = qc.Station(qdac, lockin_topo, lockin_right,
+                     lockin_left, keysight, zi)
 
 # Initialisation of the experiment
 
-qc.init("./MajoQubit", "DRALD_001D4", STATION)
+qc.init("./MajoQubit", "INSERT_SAMPLE_NAME_HERE", STATION)
