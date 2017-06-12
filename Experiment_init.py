@@ -16,11 +16,11 @@ from qcodes.instrument.parameter import ManualParameter
 from qcodes.instrument.parameter import StandardParameter
 from qcodes.utils.validators import Enum
 from qcodes.utils.wrappers import init, _plot_setup, _save_individual_plots
-from qcodes.instrument_drivers.tektronix.AWGFileParser import parse_awg_file 
+from qcodes.instrument_drivers.tektronix.AWGFileParser import parse_awg_file
 
 import qcodes.instrument_drivers.tektronix.Keithley_2600 as keith
-import qcodes.instrument_drivers.rohde_schwarz.SGS100A as sg  
-import qcodes.instrument_drivers.tektronix.AWG5014 as awg  
+import qcodes.instrument_drivers.rohde_schwarz.SGS100A as sg
+import qcodes.instrument_drivers.tektronix.AWG5014 as awg
 import qcodes.instrument_drivers.HP .HP8133A as hpsg
 
 import logging
@@ -121,6 +121,29 @@ class QDAC_T10(QDac):
                                                            'dc factor left')))
 
 
+# Subclass the DMM
+
+
+class Keysight_34465A_T10(Keysight_34465A):
+
+    def __init__(self, name, address, **kwargs):
+        super().__init__(name, address, **kwargs)
+
+        self.iv_conv = 1
+
+        self.add_parameter('ivconv',
+                           label='Current',
+                           unit='pA',
+                           get_cmd=self._get_current,
+                           set_cmd=None)
+
+    def _get_current(self):
+        """
+        get_cmd for dmm readout of IV_TAMP parameter
+        """
+        return self.volt()/self.iv_conv*1E12
+
+
 # Initialisation of intruments
 qdac = QDAC_T10('qdac', 'ASRL6::INSTR', config, update_currents=False)
 lockin_topo = SR830_T10('lockin_topo', 'GPIB10::7::INSTR')
@@ -163,4 +186,3 @@ else:
 # Initialisation of the experiment
 
 qc.init("./MajoQubit", "DVZ_004d1", STATION)
-
