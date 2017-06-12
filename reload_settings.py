@@ -116,7 +116,24 @@ def check_unused_qdac_channels():
             log.warning('Unused qDac channel not zero: channel '
                         '{:02}: {}'.format(ch, temp_v))
 
+def get_current(dmm, iv_conv):
+    """get_cmd for dmm readout of IV_TAMP parameter"""
+    return dmm.volt()/iv_conv*1E12
 
+# Delete ivconv parameters, if they are already defined
+try:
+    del keysightdmm_top.parameters['ivconv']
+except KeyError:
+    pass
+
+keysightdmm_top.add_parameter(name='ivconv',
+                              label='Current (pA)',
+                              unit='',
+                              get_cmd=partial(get_current, keysightdmm_top, 
+                              float(configs.get('Gain settings', 'iv topo gain'))),
+                              set_cmd=None)
+            
+            
 def reload_SR830_settings():
     """
     Function to update the SR830 voltage divider values based on the conf. file
