@@ -13,6 +13,7 @@ def bias_channels():
     """
 
     configs = Config.default
+    configs.reload()
 
     bias_chan1 = configs.get('Channel Parameters', 'topo bias channel')
     bias_chan2 = configs.get('Channel Parameters', 'left sensor bias channel')
@@ -27,6 +28,7 @@ def used_channels():
     """
 
     configs = Config.default
+    configs.reload()
 
     l_chs = configs.get('QDac Channel Labels')
     return sorted([int(key) for key in l_chs.keys()])
@@ -52,6 +54,7 @@ def channel_labels():
     value: label (str)
     """
     configs = Config.default
+    configs.reload()
 
     labs = configs.get('QDac Channel Labels')
     output = dict(zip([int(key) for key in labs.keys()], labs.values()))
@@ -80,20 +83,21 @@ def qdac_slopes():
     Returns a dict with the QDac slopes defined in the config file
     """
 
-    config = Config.default
+    configs = Config.default
+    configs.reload()
 
-    qdac_slope = float(config.get('Ramp speeds',
-                                  'max rampspeed qdac'))
-    bg_slope = float(config.get('Ramp speeds',
-                                'max rampspeed bg'))
-    bias_slope = float(config.get('Ramp speeds',
-                                  'max rampspeed bias'))
+    qdac_slope = float(configs.get('Ramp speeds',
+                                   'max rampspeed qdac'))
+    bg_slope = float(configs.get('Ramp speeds',
+                                 'max rampspeed bg'))
+    bias_slope = float(configs.get('Ramp speeds',
+                                   'max rampspeed bias'))
 
     QDAC_SLOPES = dict(zip(used_channels(),
                            len(used_channels())*[qdac_slope]))
 
-    QDAC_SLOPES[int(config.get('Channel Parameters',
-                               'backgate channel'))] = bias_slope
+    QDAC_SLOPES[int(configs.get('Channel Parameters',
+                                'backgate channel'))] = bias_slope
     for ii in bias_channels():
         QDAC_SLOPES[ii] = bias_slope
 
@@ -124,6 +128,7 @@ def reload_DMM_settings():
     # Get the two global objects containing the instruments and settings
     station = qc.Station.default
     configs = Config.default
+    configs.reload()
 
     dmm_top = station['keysight_dmm_top']
 
@@ -138,6 +143,7 @@ def reload_SR830_settings():
     # Get the two global objects containing the instruments and settings
     station = qc.Station.default
     configs = Config.default
+    configs.reload()
 
     # one could put in some validation here if wanted
 
@@ -165,16 +171,17 @@ def reload_QDAC_settings():
     Function to update the qdac based on the configuration file
     """
 
-    config = Config.default
+    configs = Config.default
+    configs.reload()
     station = qc.Station.default
 
     # Update the voltage dividers
-    topo_dc = float(config.get('Gain settings',
-                               'dc factor topo'))
-    sens_r_dc = float(config.get('Gain settings',
-                                 'dc factor right'))
-    sens_l_dc = float(config.get('Gain settings',
-                                 'dc factor left'))
+    topo_dc = float(configs.get('Gain settings',
+                                'dc factor topo'))
+    sens_r_dc = float(configs.get('Gain settings',
+                                  'dc factor right'))
+    sens_l_dc = float(configs.get('Gain settings',
+                                  'dc factor left'))
     qdac = station['qdac']
     qdac.topo_bias.division_value = topo_dc
     qdac.sens_r_bias.division_value = sens_r_dc
@@ -182,7 +189,7 @@ def reload_QDAC_settings():
 
     # Set the range validators
     # NB: This is the voltage AT the QDac, BEFORE votlage dividers
-    ranges = config.get('Channel ranges')
+    ranges = configs.get('Channel ranges')
     for chan in range(1, 49):
         try:
             chan_range = ranges[str(chan)]
