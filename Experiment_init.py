@@ -8,7 +8,7 @@ from qcodes.instrument_drivers.Keysight.Keysight_34465A import Keysight_34465A
 from qcodes.instrument_drivers.ZI.ZIUHFLI import ZIUHFLI
 from qcodes.instrument_drivers.devices import VoltageDivider
 
-from configreader import Config
+from qcodes.utils.configreader import Config
 
 import qcodes.instrument_drivers.tektronix.Keithley_2600 as keith
 import qcodes.instrument_drivers.rohde_schwarz.SGS100A as sg
