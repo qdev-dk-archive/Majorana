@@ -1,18 +1,14 @@
-from time import sleep
-from functools import partial
-
 import qcodes as qc
 
 from qcodes.instrument_drivers.QDev.QDac import QDac
 from qcodes.instrument_drivers.stanford_research.SR830 import SR830
+from qcodes.instrument_drivers.stanford_research.SR830 import ChannelBuffer
 from qcodes.instrument_drivers.Keysight.Keysight_33500B import Keysight_33500B
 from qcodes.instrument_drivers.Keysight.Keysight_34465A import Keysight_34465A
 from qcodes.instrument_drivers.ZI.ZIUHFLI import ZIUHFLI
 from qcodes.instrument_drivers.devices import VoltageDivider
 
 from configreader import Config
-
-from qcodes.utils.validators import Enum
 
 import qcodes.instrument_drivers.tektronix.Keithley_2600 as keith
 import qcodes.instrument_drivers.rohde_schwarz.SGS100A as sg
@@ -25,12 +21,47 @@ import logging
 from qcodes.instrument_drivers.oxford.mercuryiPS import MercuryiPS
 
 
+# A conductance buffer, needed for the faster 2D conductance measurements
+# (Dave Wecker style)
+
+
+class ConductanceBuffer(ChannelBuffer):
+    """
+    A full-buffered version of the conductance based on an
+    array of X measurements
+
+    We basically just slightly tweak the get method
+    """
+
+    def __init__(self, name: str, instrument: 'SR830_T10', **kwargs):
+        super().__init__(name, instrument, channel=1)
+        self.unit = ('e^2/h')
+
+    def get(self):
+        # If X is not being measured, complain
+        if self._instrument.ch1_display() != 'X':
+            raise ValueError('Can not return conductance since X is not '
+                             'being measured on channel 1.')
+
+        resistance_quantum = 25.818e3  # (Ohm)
+        xarray = super().get()
+        iv_conv = self._instrument.ivgain
+        ac_excitation = self._instrument.acfactor
+
+        gs = xarray/iv_conv/ac_excitation*resistance_quantum
+
+        return gs
+
+
 # Subclass the SR830
 
 
 class SR830_T10(SR830):
     """
-    An SR830 with a Voltage divider absorbed into it
+    An SR830 with the following super powers:
+        - a Voltage divider
+        - An I/V converter
+        - A conductance buffer
     """
 
     def __init__(self, name, address, **kwargs):
@@ -48,19 +79,22 @@ class SR830_T10(SR830):
         self.add_parameter('g',
                            label='{} conductance'.format(self.name),
                            # use lambda for late binding
-                           get_cmd=lambda: self._get_conductance(self.amplitude_true(),
-                                                                 self.ivgain),
+                           get_cmd=self._get_conductance,
                            unit='e^2/h',
                            get_parser=float)
 
-    def _get_conductance(self, ac_excitation, iv_conv):
+        self.add_parameter('conductance',
+                           label='{} conductance'.format(self.name),
+                           parameter_class=ConductanceBuffer)
+
+    def _get_conductance(self):
         """
         get_cmd for conductance parameter
         """
         resistance_quantum = 25.818e3  # (Ohm)
-        i = self.X() / iv_conv
+        i = self.X() / self.ivgain
         # ac excitation voltage at the sample
-        v_sample = ac_excitation
+        v_sample = self.amplitude_true()
 
         return (i/v_sample)*resistance_quantum
 
@@ -132,6 +166,7 @@ class Keysight_34465A_T10(Keysight_34465A):
         get_cmd for dmm readout of IV_TAMP parameter
         """
         return self.volt()/self.iv_conv*1E12
+
 
 if __name__ == '__main__':
 
