@@ -16,8 +16,8 @@ def bias_channels():
     configs.reload()
 
     bias_chan1 = configs.get('Channel Parameters', 'topo bias channel')
-    bias_chan2 = configs.get('Channel Parameters', 'left sensor bias channel')
-    bias_chan3 = configs.get('Channel Parameters', 'right sensor bias channel')
+    # bias_chan2 = configs.get('Channel Parameters', 'left sensor bias channel')
+    # bias_chan3 = configs.get('Channel Parameters', 'right sensor bias channel')
 
     return [int(bias_chan1), int(bias_chan2), int(bias_chan3)]
 
@@ -148,8 +148,8 @@ def reload_SR830_settings():
     # one could put in some validation here if wanted
 
     lockin_topo = station['lockin_topo']
-    lockin_right = station['lockin_right']
-    lockin_left = station['lockin_left']
+    lockin_right = station['lockin_r']
+    lockin_left = station['lockin_l']
 
     lockin_topo.acfactor = float(configs.get('Gain settings',
                                              'ac factor topo'))
@@ -178,14 +178,14 @@ def reload_QDAC_settings():
     # Update the voltage dividers
     topo_dc = float(configs.get('Gain settings',
                                 'dc factor topo'))
-    sens_r_dc = float(configs.get('Gain settings',
-                                  'dc factor right'))
-    sens_l_dc = float(configs.get('Gain settings',
-                                  'dc factor left'))
+    # sens_r_dc = float(configs.get('Gain settings',
+    #                               'dc factor right'))
+    # sens_l_dc = float(configs.get('Gain settings',
+    #                               'dc factor left'))
     qdac = station['qdac']
     qdac.topo_bias.division_value = topo_dc
-    qdac.sens_r_bias.division_value = sens_r_dc
-    qdac.sens_l_bias.division_value = sens_l_dc
+    # qdac.sens_r_bias.division_value = sens_r_dc
+    # qdac.sens_l_bias.division_value = sens_l_dc
 
     # Set the range validators
     # NB: This is the voltage AT the QDac, BEFORE votlage dividers

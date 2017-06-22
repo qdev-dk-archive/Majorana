@@ -180,7 +180,6 @@ def do2d_M(inst_set, start, stop, n_points, delay, inst_set2, start2, stop2,
 
     return plot, data
 
-
 def ramp_qdac(chan, target_voltage, slope=None):
     """
     Ramp a qdac channel. Blocking.
