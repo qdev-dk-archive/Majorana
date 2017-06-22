@@ -56,8 +56,11 @@ class SR830_T10(SR830):
         self.ivgain = 1
         self.__acf = 1
 
-        self.amplitude_true = VoltageDivider(self.amplitude,
-                                             self.acfactor)
+        self.add_parameter('amplitude_true',
+                           parameter_class=VoltageDivider,
+                           v1=self.amplitude,
+                           division_value=self.acfactor)
+
         self.add_parameter('g',
                            label='{} conductance'.format(self.name),
                            # use lambda for late binding
