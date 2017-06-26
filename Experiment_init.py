@@ -52,9 +52,7 @@ class ConductanceBuffer(ChannelBuffer):
 
         return gs
 
-
 # Subclass the SR830
-
 
 class SR830_T10(SR830):
     """
