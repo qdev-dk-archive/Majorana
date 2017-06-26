@@ -7,7 +7,7 @@ from time import sleep
 import qcodes as qc
 from qcodes.instrument.parameter import Parameter
 
-from Experiment_init import SR830_T10
+from modules.Majorana.Experiment_init import SR830_T10
 
 
 def do2Dconductance(outer_param: Parameter,
@@ -68,7 +68,7 @@ def do2Dconductance(outer_param: Parameter,
 
     def start_buffer():
         sr.buffer_start()
-        sr.conductance.shape = (21,)  # This is the worst hack in the world
+        sr.conductance.shape = (inner_npts,)  # This is something
 
     def reset_buffer():
         sr.buffer_reset()
@@ -92,6 +92,6 @@ def do2Dconductance(outer_param: Parameter,
     data = outer_loop.get_data_set(name='testmap')
 
     liveplot = qc.QtPlot()
-    liveplot.add(data.lockin_conductance)
+    liveplot.add(getattr(data, '{}_conductance'.format(sr.name)))
 
     _ = outer_loop.with_bg_task(liveplot.update, liveplot.save).run()
