@@ -2,7 +2,7 @@ import logging
 import qcodes as qc
 from qcodes.utils.validators import Numbers
 
-from configreader import Config
+from qcodes.utils.configreader import Config
 
 log = logging.getLogger(__name__)
 
