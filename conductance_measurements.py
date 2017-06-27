@@ -8,7 +8,7 @@ import qcodes as qc
 from qcodes.instrument.parameter import Parameter
 from qcodes.utils.wrappers import _do_measurement
 
-from Experiment_init import SR830_T10
+from modules.Majorana.Experiment_init import SR830_T10
 
 
 def do2Dconductance(outer_param: Parameter,
@@ -73,6 +73,8 @@ def do2Dconductance(outer_param: Parameter,
 
     def start_buffer():
         sr.buffer_start()
+        sr.conductance.shape = (inner_npts,)  # This is something
+
 
     def reset_buffer():
         sr.buffer_reset()
@@ -92,6 +94,7 @@ def do2Dconductance(outer_param: Parameter,
                                                                  prep_buffer_task,
                                                                  sr.conductance,
                                                                  reset_task)
+
     set_params = ((inner_param, inner_start, inner_stop),
                   (outer_param, outer_start, outer_stop))
     meas_params = (sr.conductance,)
