@@ -75,7 +75,6 @@ def do2Dconductance(outer_param: Parameter,
         sr.buffer_start()
         sr.conductance.shape = (inner_npts,)  # This is something
 
-
     def reset_buffer():
         sr.buffer_reset()
 
