@@ -6,6 +6,7 @@ from time import sleep
 
 import qcodes as qc
 from qcodes.instrument.parameter import Parameter
+from qcodes.utils.wrappers import _do_measurement
 
 from Experiment_init import SR830_T10
 
@@ -33,7 +34,6 @@ def do2Dconductance(outer_param: Parameter,
         inner_npts: The number of points in the inner loop
         lockin: The lock-in amplifier to use
     """
-
     station = qc.Station.default
 
     sr = lockin
@@ -52,8 +52,13 @@ def do2Dconductance(outer_param: Parameter,
     tau = sr.time_constant()
     min_delay = 0.002  # what's the physics behind this number?
 
+    # Prepare for the first iteration
+    # Some of these things have to be repeated during the loop
     sr.buffer_reset()
     sr.buffer_start()
+    sr.conductance.shape = (inner_npts,)
+    sr.conductance.setpoint_labels = ('Volts',)
+    sr.conductance.setpoint_units = ('V',)
 
     def trigger():
         sleep(tau + min_delay)
@@ -68,7 +73,6 @@ def do2Dconductance(outer_param: Parameter,
 
     def start_buffer():
         sr.buffer_start()
-        sr.conductance.shape = (21,)  # This is the worst hack in the world
 
     def reset_buffer():
         sr.buffer_reset()
@@ -88,10 +92,7 @@ def do2Dconductance(outer_param: Parameter,
                                                                  prep_buffer_task,
                                                                  sr.conductance,
                                                                  reset_task)
-
-    data = outer_loop.get_data_set(name='testmap')
-
-    liveplot = qc.QtPlot()
-    liveplot.add(data.lockin_conductance)
-
-    _ = outer_loop.with_bg_task(liveplot.update, liveplot.save).run()
+    set_params = ((inner_param, inner_start, inner_stop),
+                  (outer_param, outer_start, outer_stop))
+    meas_params = (sr.conductance,)
+    _do_measurement(outer_loop, set_params, meas_params)
