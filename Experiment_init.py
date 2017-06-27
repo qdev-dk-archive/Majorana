@@ -122,6 +122,14 @@ class QDAC_T10(QDac):
                                       'topo bias channel'))
         topo_channel = self.parameters['ch{:02}_v'.format(topo_channel)]
 
+        self.add_parameter('current_bias',
+                           label='{} conductance'.format(self.name),
+                           # use lambda for late binding
+                           get_cmd=lambda: self.parameters['ch40_v'].get()/10E6*1E9,
+                           set_cmd=lambda value: self.parameters['ch40_v'].set(value*1E-9*10E6),
+                           unit='nA',
+                           get_parser=float)
+
         # sens_r_channel = int(config.get('Channel Parameters',
         #                                'right sensor bias channel'))
         # sens_r_channel = self.parameters['ch{:02}_v'.format(sens_r_channel)]
@@ -218,6 +226,7 @@ if __name__ == '__main__':
     print('Querying all instrument parameters for metadata.'
           'This may take a while...')
 
+
     STATION = qc.Station(qdac, lockin_topo, lockin_right, lockin_left,
                          keysightgen_left, keysightgen_mid, keysightgen_right,
                          keysightdmm_top, keysightdmm_mid, keysightdmm_bot,
@@ -226,4 +235,5 @@ if __name__ == '__main__':
 
     # Initialisation of the experiment
 
-    qc.init("./MajoQubit", "DVZ_KMQ_001D2", STATION)
+    qc.init("./MajoQubit", "DVZ_MCQ002A2", STATION)
+
