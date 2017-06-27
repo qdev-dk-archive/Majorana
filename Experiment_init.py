@@ -103,6 +103,14 @@ class QDAC_T10(QDac):
                                       'topo bias channel'))
         topo_channel = self.parameters['ch{:02}_v'.format(topo_channel)]
 
+        self.add_parameter('current_bias',
+                           label='{} conductance'.format(self.name),
+                           # use lambda for late binding
+                           get_cmd=lambda: self.parameters['ch40_v'].get()/10E6*1E9,
+                           set_cmd=lambda value: self.parameters['ch40_v'].set(value*1E-9*10E6),
+                           unit='nA',
+                           get_parser=float)
+
         # sens_r_channel = int(config.get('Channel Parameters',
         #                                'right sensor bias channel'))
         # sens_r_channel = self.parameters['ch{:02}_v'.format(sens_r_channel)]
@@ -149,8 +157,8 @@ class Keysight_34465A_T10(Keysight_34465A):
 # Initialisation of intruments
 qdac = QDAC_T10('qdac', 'ASRL6::INSTR', config, update_currents=False)
 lockin_topo = SR830_T10('lockin_topo', 'GPIB10::7::INSTR')
-lockin_left = SR830_T10('lockin_l', 'GPIB10::10::INSTR')
-lockin_right = SR830_T10('lockin_r', 'GPIB10::14::INSTR')
+lockin_left = SR830_T10('lockin_l', 'GPIB10::14::INSTR')
+lockin_right = SR830_T10('lockin_r', 'GPIB10::10::INSTR')
 zi = ZIUHFLI('ziuhfli', 'dev2189')
 v1 = vna.ZNB20('VNA', 'TCPIP0::192.168.15.108::inst0::INSTR')
 sg1 = sg.RohdeSchwarz_SGS100A("sg1","TCPIP0::192.168.15.107::inst0::INSTR")
@@ -187,4 +195,4 @@ else:
 
 # Initialisation of the experiment
 
-qc.init("./MajoQubit", "DVZ_KMQ_001D2", STATION)
+qc.init("./MajoQubit", "DVZ_MCQ002A2", STATION)
