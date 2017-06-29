@@ -510,5 +510,4 @@ def showPulsedExperiment(fast_npts=None,
                             pulsehigh=pulsehigh,
                             SR=1e9, segname='high')
 
-
     seq.plotSequence()
