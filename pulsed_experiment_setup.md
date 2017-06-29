@@ -15,10 +15,17 @@ Here is a description of the intended setup.
 ## Wiring
 
 KEY output 1 -> AWG add input ch 1 (on the back of the box)
+
 AWG channel 1 mkr 2 -> KEY Ext Trig/ Gate/ FSK/ Burst (on the back of the box)
+
 AWG channel 1 analog -> SAMPLE
+
 AWG channel 1 mkr 1 (split) -> ZI Ref / Trigger 1
+
 AWG channel 1 mkr 1 -> SWITCH TTL
+
 SAMPLE -> ZI Signal Input 1
+
 ZI Signal Output 1 -> SWITCH RF In
+
 SWITCH RF Out 2 -> SAMPLE
