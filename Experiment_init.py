@@ -50,7 +50,7 @@ class ConductanceBuffer(ChannelBuffer):
         resistance_quantum = 25.818e3  # (Ohm)
         xarray = super().get()
         iv_conv = self._instrument.ivgain
-        ac_excitation = self._instrument.acfactor
+        ac_excitation = self._instrument.amplitude_true()
 
         gs = xarray/iv_conv/ac_excitation*resistance_quantum
 
