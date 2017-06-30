@@ -3,6 +3,7 @@
 
 from typing import Union
 from time import sleep
+import numpy as np
 
 import qcodes as qc
 from qcodes.instrument.parameter import Parameter
@@ -59,6 +60,9 @@ def do2Dconductance(outer_param: Parameter,
     sr.conductance.shape = (inner_npts,)
     sr.conductance.setpoint_labels = ('Volts',)
     sr.conductance.setpoint_units = ('V',)
+    sr.conductance.setpoints = (tuple(np.linspace(inner_start,
+                                                  inner_stop,
+                                                  inner_npts)),)
 
     def trigger():
         sleep(tau + min_delay)
@@ -70,6 +74,9 @@ def do2Dconductance(outer_param: Parameter,
         # For the dataset/plotting, put in the correct setpoints
         sr.conductance.setpoint_labels = ('Volts',)
         sr.conductance.setpoint_units = ('V',)
+        sr.conductance.setpoints = (tuple(np.linspace(inner_start,
+                                                      inner_stop,
+                                                      inner_npts)),)
 
     def start_buffer():
         sr.buffer_start()
