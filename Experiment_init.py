@@ -24,8 +24,6 @@ import qcodes.instrument_drivers.tektronix.AWG5014 as awg
 import qcodes.instrument_drivers.HP .HP8133A as hpsg
 import qcodes.instrument_drivers.rohde_schwarz.ZNB20 as vna
 
-
-
 import logging
 import re
 import time
@@ -195,4 +193,4 @@ else:
 
 # Initialisation of the experiment
 
-qc.init("./MajoQubit", "DVZ_MCQ002A2", STATION)
+qc.init("./MajoQubit", "DVZ_MCQ002A1", STATION)
