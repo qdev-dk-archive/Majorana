@@ -1,5 +1,14 @@
 from Pulsed_Experiments_scripts import doPulsedExperiment
 
+from qcodes.instrument_drivers.ZI.ZIUHFLI import ZIUHFLI
+import qcodes.instrument_drivers.tektronix.AWG5014 as awg
+from qcodes.instrument_drivers.keysight.Keysight_33500B import Keysight_33500B
+
+zi = ZIUHFLI('ZIUHFLI', 'dev2235') # 192.168.15.106
+awg1 = awg.Tektronix_AWG5014('AWG1', 'TCPIP0::192.168.15.107::inst0::INSTR', timeout=40)
+ks = Keysight_33500B('ks', 'TCPIP0::192.168.15.108::inst0::INSTR')
+
+
 doPulsedExperiment(fast_axis='ramp',
                    slow_axis='dt',
                    slow_start=1e-6,
@@ -15,4 +24,4 @@ doPulsedExperiment(fast_axis='ramp',
                    trig_delay=1e-6,
                    demod_freq=10e6
                    )
-x`
+
