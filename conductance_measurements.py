@@ -20,7 +20,8 @@ def do2Dconductance(outer_param: Parameter,
                     inner_start: Union[float, int],
                     inner_stop: Union[float, int],
                     inner_npts: int,
-                    lockin: SR830_T10):
+                    lockin: SR830_T10,
+                    wait_time=None):
     """
     Function to perform a sped-up 2D conductance measurement
 
@@ -52,7 +53,8 @@ def do2Dconductance(outer_param: Parameter,
 
     tau = sr.time_constant()
     min_delay = 0.002  # what's the physics behind this number?
-
+    if wait_time is None:
+        wait_time = tau + min_delay
     # Prepare for the first iteration
     # Some of these things have to be repeated during the loop
     sr.buffer_reset()
@@ -65,7 +67,7 @@ def do2Dconductance(outer_param: Parameter,
                                                   inner_npts)),)
 
     def trigger():
-        sleep(tau + min_delay)
+        sleep(wait_time)
         sr.send_trigger()
 
     def prepare_buffer():
