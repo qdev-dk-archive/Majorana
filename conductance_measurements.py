@@ -1,16 +1,19 @@
 # Module file for conductance measurements with the
 # SR830. Implementing the good ideas of Dave Wecker
 
-from typing import Union
+from typing import Union, Optional
 from time import sleep
 import numpy as np
-
 import qcodes as qc
 from qcodes.instrument.parameter import Parameter
 from qcodes.utils.wrappers import _do_measurement
+from qcodes.instrument_drivers.QDev.QDac import QDac
+from qcodes.instrument_drivers.QDev.QDac_channels import QDac as QDacch
 
-from modules.Majorana.Experiment_init import SR830_T10
-
+try:
+    from modules.Majorana.Experiment_init import SR830_T10
+except ImportError:
+    from Experiment_init import SR830_T10
 
 def do2Dconductance(outer_param: Parameter,
                     outer_start: Union[float, int],
@@ -21,7 +24,7 @@ def do2Dconductance(outer_param: Parameter,
                     inner_stop: Union[float, int],
                     inner_npts: int,
                     lockin: SR830_T10,
-                    wait_time=None):
+                    delay: Optional[float]=None):
     """
     Function to perform a sped-up 2D conductance measurement
 
@@ -35,6 +38,8 @@ def do2Dconductance(outer_param: Parameter,
         inner_stop: The inner loop stop voltage
         inner_npts: The number of points in the inner loop
         lockin: The lock-in amplifier to use
+        delay: Delay to wait after setting inner parameter before triggering lockin.
+          If None will use default delay, otherwise used the supplied.
     """
     station = qc.Station.default
 
@@ -53,28 +58,30 @@ def do2Dconductance(outer_param: Parameter,
 
     tau = sr.time_constant()
     min_delay = 0.002  # what's the physics behind this number?
-    if wait_time is None:
-        wait_time = tau + min_delay
+    if delay is None:
+        delay = tau + min_delay
     # Prepare for the first iteration
     # Some of these things have to be repeated during the loop
     sr.buffer_reset()
     sr.buffer_start()
     sr.conductance.shape = (inner_npts,)
-    sr.conductance.setpoint_labels = ('Volts',)
+    sr.conductance.setpoint_names = (inner_param.name,)
+    sr.conductance.setpoint_labels = (inner_param.label,)
     sr.conductance.setpoint_units = ('V',)
     sr.conductance.setpoints = (tuple(np.linspace(inner_start,
                                                   inner_stop,
                                                   inner_npts)),)
 
     def trigger():
-        sleep(wait_time)
+        sleep(delay)
         sr.send_trigger()
 
     def prepare_buffer():
         # here it should be okay to call ch1_databuffer... I think...
         sr.ch1_databuffer.prepare_buffer_readout()
         # For the dataset/plotting, put in the correct setpoints
-        sr.conductance.setpoint_labels = ('Volts',)
+        sr.conductance.setpoint_names = (inner_param.name,)
+        sr.conductance.setpoint_labels = (inner_param.label,)
         sr.conductance.setpoint_units = ('V',)
         sr.conductance.setpoints = (tuple(np.linspace(inner_start,
                                                       inner_stop,
@@ -88,10 +95,8 @@ def do2Dconductance(outer_param: Parameter,
         sr.buffer_reset()
 
     trig_task = qc.Task(trigger)
-    prep_buffer_task = qc.Task(prepare_buffer)
     reset_task = qc.Task(reset_buffer)
     start_task = qc.Task(start_buffer)
-
     inner_loop = qc.Loop(inner_param.sweep(inner_start,
                                            inner_stop,
                                            num=inner_npts)).each(trig_task)
@@ -99,11 +104,26 @@ def do2Dconductance(outer_param: Parameter,
                                            outer_stop,
                                            num=outer_npts)).each(start_task,
                                                                  inner_loop,
-                                                                 prep_buffer_task,
                                                                  sr.conductance,
                                                                  reset_task)
 
     set_params = ((inner_param, inner_start, inner_stop),
                   (outer_param, outer_start, outer_stop))
     meas_params = (sr.conductance,)
-    _do_measurement(outer_loop, set_params, meas_params)
+    prepare_buffer()
+    qdac = None
+    # ensure that any waveform generator is unbound from the qdac channels that we step if
+    # we are stepping the qdac
+    if isinstance(inner_param._instrument, QDac) or isinstance(inner_param._instrument, QDacch):
+        qdac = inner_param._instrument
+        # remove this stupid hack once we have real channels
+        qdac.parameters["ch{}_slope".format(inner_param.name[2:4])]('Inf')
+    if isinstance(outer_param._instrument, QDac) or isinstance(outer_param._instrument, QDacch):
+        qdac = outer_param._instrument
+        # remove this stupid hack once we have real channels
+        qdac.parameters["ch{}_slope".format(outer_param.name[2:4])]('Inf')
+    if qdac:
+        qdac.fast_voltage_set(True)  # now that we have unbound the function generators
+                                     # we don't need to do it in the loop
+        qdac.voltage_set_dont_wait(False)  # this is un safe and highly experimental
+    _do_measurement(outer_loop, set_params, meas_params, do_plots=False)
