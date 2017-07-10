@@ -62,6 +62,11 @@ def do2Dconductance(outer_param: Parameter,
         delay = tau + min_delay
     # Prepare for the first iteration
     # Some of these things have to be repeated during the loop
+    sr.buffer_SR('Trigger')
+    set_sr = sr.buffer_SR()
+    if set_sr != 'Trigger':
+        raise RuntimeError("Could not set sample rate correctly. "
+                           "Try lockin.write('*CLS') and rerun")
     sr.buffer_reset()
     sr.buffer_start()
     sr.conductance.shape = (inner_npts,)
