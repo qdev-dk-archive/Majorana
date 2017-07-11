@@ -23,10 +23,11 @@ from qcodes.instrument_drivers.QDev.QDac_channels import QDac
 
 from qcodes.instrument_drivers.stanford_research.SR830 import SR830
 from qcodes.instrument_drivers.stanford_research.SR830 import ChannelBuffer
-from qcodes.instrument_drivers.Keysight.Keysight_33500B import Keysight_33500B
+from qcodes.instrument_drivers.Keysight.Keysight_33500B_channels import Keysight_33500B_Channels
 from qcodes.instrument_drivers.Keysight.Keysight_34465A import Keysight_34465A
 from qcodes.instrument_drivers.ZI.ZIUHFLI import ZIUHFLI
 from qcodes.instrument_drivers.devices import VoltageDivider
+from qcodes import ArrayParameter
 
 import qcodes.instrument_drivers.tektronix.Keithley_2600 as keith
 import qcodes.instrument_drivers.rohde_schwarz.SGS100A as sg
@@ -39,6 +40,7 @@ import qcodes.instrument_drivers.rohde_schwarz.ZNB as vna
 from qcodes.utils.configreader import Config
 from qcodes.utils.validators import Numbers
 import logging
+import numpy as np
 import re
 import time
 from functools import partial
@@ -74,6 +76,7 @@ if __name__ == '__main__':
     lockin_left = SR830_T10('lockin_l', 'GPIB10::10::INSTR')
     lockin_right = SR830_T10('lockin_r', 'GPIB10::14::INSTR')
     zi = ZIUHFLI_T10('ziuhfli', 'dev2189')
+
     keysightgen_left = Keysight_33500B('keysight_gen_left', 'TCPIP0::192.168.15.101::inst0::INSTR')
     keysightgen_left.add_function('sync_phase',call_cmd='SOURce1:PHASe:SYNChronize')
     keysightgen_mid = Keysight_33500B('keysight_gen_mid', 'TCPIP0::192.168.15.114::inst0::INSTR')
@@ -87,6 +90,7 @@ if __name__ == '__main__':
     sg1.frequency.set_validator(Numbers(1e5,43.5e9))  # SMF100A can go to 43.5 GHz.
     hpsg1 = hpsg.HP8133A("hpsg1", 'GPIB10::4::INSTR')  
   #  keysightgen_pulse = Keysight_33500B('keysight_gen_pulse', 'TCPIP0::192.168.15.109::inst0::INSTR')
+
     mercury = MercuryiPS(name='mercury',
                          address='192.168.15.102',
                          port=7020,
