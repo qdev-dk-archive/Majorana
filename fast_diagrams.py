@@ -1,18 +1,32 @@
+
 from qcodes.utils.wrappers import do1d
 import qcodes as qc
 
-def prepare_measurement(keysight_low_V, keysight_high_V, scope_avger, qdac_fast_channel, npts, zi, add_offset: bool=True):
+from typing import Sequence, Optional, Union
+from functools import wraps
+import numpy as np
+from qcodes.instrument.parameter import StandardParameter
+from qcodes.utils.wrappers import do1d, do1dcombined
+from qcodes.instrument_drivers.Keysight.Keysight_33500B_channels import KeysightChannel
+from customised_instruments import Scope_avg, ZIUHFLI_T10
+
+
+def prepare_measurement(keysight_low_V: float, keysight_high_V: float,
+                        scope_avger: Scope_avg, qdac_fast_channel: StandardParameter,
+                        npts: int, zi, add_offset: bool=True):
     """
     Args:
         keysight_low_V (float): keysight ramp start value
         keysight_high_V (float): keysight ramp stop value
         scope_avger (Scope_avg): The Scope_avg instance
-        qdac_fast_channel (int): The number of the QDac channel added to
-            the Keysight ramp
+        qdac_fast_channel: The number of the qdac channel to use for label
+            offset
+        zi: Instance of ZIUHFLI to use
+        add_offset: Add the qdac_fast_channel value to the fast axis
     """
     zi.Scope.prepare_scope()
     #npts = zi.scope_length()
-    
+
     offset = 0
     if add_offset:
         offset = qdac_fast_channel.get()
@@ -28,45 +42,104 @@ def prepare_measurement(keysight_low_V, keysight_high_V, scope_avger, qdac_fast_
     # zi.scope_avg_ch1.setpoint_units = ('V', )
 
 
+def arrayify_args(f):
 
-def fast_charge_diagram(keysight_channel, fast_v_start, fast_v_stop, n_averages,
-                        qdac_channel, q_start, q_stop, npoints, delay, qdac_fast_channel, comp_scale,
-                        scope_signal, zi_trig_signal='Trig Input 1',
-                        trigger_holdoff=60e-6, zi_samplingrate='14.0 MHz', zi_scope_length=4096,
-                        zi_trig_hyst=0, zi_trig_level=.5, zi_trig_delay = 0, print_settings=False,
-                        zi=None, keysight=None, tasks_to_perform=None):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        main_channel_args = ('keysight_channels', 'fast_v_start', 'fast_v_stop',
+                             'qdac_channels', 'q_start', 'q_stop',
+                             'qdac_fast_channels')
+        compensation_args = ('fast_compensation_channels',
+                             'fast_compensation_scale',
+                             'fast_compensation_phase_offset')
+        scope_args = ('scope_signal',)
+        args_to_arrayify = main_channel_args + scope_args
+        if kwargs.get('fast_compensation_channels'):
+            args_to_arrayify += 'fast_compensation_channels'
+        for argname in args_to_arrayify:
+            if not isinstance(kwargs[argname], Sequence) or isinstance(kwargs[argname], str):
+                kwargs[argname] = [kwargs[argname]]
+
+        # verify that we have the correct number of args for main channels
+        # i.e all matching
+        n_key_channels = len(kwargs['keysight_channels'])
+        for argname in main_channel_args:
+            if len(kwargs[argname]) != n_key_channels:
+                raise RuntimeError("Inconsistent number of channel args provided. "
+                                   "{} channels used but len of {} is {}".format(n_key_channels,
+                                                                                 argname,
+                                                                                 len(kwargs[argname])))
+        if len(kwargs['scope_signal']) < n_key_channels:
+            raise RuntimeError("Number of scope channels is smaller than number of keysight_channels")
+
+        return f(*args, **kwargs)
+    return wrapper
+
+number = Union[float, int]
+num_or_list_of_num = Union[Sequence[number], number]
+
+
+@arrayify_args
+def fast_charge_diagram(keysight_channels: Union[Sequence[KeysightChannel], KeysightChannel]=None,
+                        fast_v_start: num_or_list_of_num=None,
+                        fast_v_stop: num_or_list_of_num=None,
+                        n_averages: int=None,
+                        qdac_channels: Union[Sequence[StandardParameter], StandardParameter]=None,
+                        q_start: num_or_list_of_num=None, q_stop: num_or_list_of_num=None,
+                        npoints: int=None, delay: number=None,
+                        qdac_fast_channels: Union[Sequence[StandardParameter], StandardParameter]=None,
+                        comp_scale,
+                        scope_signal: Union[Sequence[str], str]=None,
+                        zi: ZIUHFLI_T10=None, zi_trig_signal: str='Trig Input 1',
+                        trigger_holdoff: float=60e-6,
+                        zi_samplingrate: str='14.0 MHz',
+                        zi_scope_length: int=4096,
+                        zi_trig_hyst: float=0.,
+                        zi_trig_level: float=.5,
+                        zi_trig_delay: float=0.,
+                        print_settings: bool=False,
+                        add_offset: bool=True,
+                        zi=None, keysight=None,
+                        tasks_to_perform: Optional[Sequence[qc.Task]]=None,
+                        fast_compensation_channels: Optional[Union[Sequence[KeysightChannel], KeysightChannel]]=None,
+                        fast_compensation_scale: float=-1.,
+                        fast_compensation_phase_offset: float=0.):
     """
     Args:
-        keysight_channel:
-        fast_v_start
-        fast_v_stop
-        keys_freq
-        n_averages
-        qdac_channel
-        q_start
-        q_stop
-        npoints:
-        delay:
-        zi_input_chan:
-        zi_trig_signal:
-        trigger_holdoff;
-        zi_samplingrate:
-        zi_trig_hyst:
-        zi_trig_level:
-        zi_trig_delay: Should be the rise time of your signal/trigger signal 
-                       For Keysight sawtooth it is 6e-7s.
+        keysight_channels: Which keysight channel to output on
+        fast_v_start: Start voltage for fast ramp on Keysight
+        fast_v_stop: End voltage for fast ramp on Keysight
+        n_averages: Number of avarages to perform
+        qdac_channels: QDac voltage channel to scan along the slow axis
+        q_start: Start voltage of QDac
+        q_stop: Stop voltage of QDac
+        npoints: Number of points in QDac scan
+        delay: time to wait between each slow axis step
+        qdac_fast_channels:
+        scope_signal:
+        zi:
+        zi_trig_signal: Which input to trigger on
+        trigger_holdoff:
+        zi_samplingrate: Sampling rate of the ZI
+        zi_scope_length: Number of points to measure in ZI trace
+        zi_trig_hyst: Trigger hysteresis uses to prevent triggers on noise
+        zi_trig_level: Trigger level of zi
+        zi_trig_delay: Should be the rise time of your signal/trigger signal
+               For Keysight sawtooth it is 6e-7s.
+        print_settings: print an overview of the settings before performing measurement
+        add_offset: Should value of qdac fast channel be added as an offset for display values of keysight
+            voltage
+        tasks_to_perform: tasks that are performed at each slow measurement. Such as compensating a gate
+        fast_compensation_channels: Channels to use for compensation of fast voltage sweep.
+        fast_compensation_scale: The fast compensation is the output multiplied by this constant.
+            Minus means that output is inverted.
+        fast_compensation_phase_offset: Phase offset between fast voltage and fast compensation in degrees.
     """
-
     if zi is None:
         zi = qc.Instrument.find_instrument('ziuhfli')
     if keysight is None:
         keysight = qc.Instrument.find_instrument('keysight_gen_left')
-    if keysight_channel not in ['ch01', 'ch02']:
-        raise ValueError('Invalid keysight channel. Must be either "ch01" or "ch02".')
 
-    if not isinstance(scope_signal, list):
-        scope_signal = [scope_signal]
-    
     if not scope_signal:
         raise ValueError('Select valid scope signal(s).')
     # In order to take thee hold off time of the uhfli into account
@@ -89,13 +162,11 @@ def fast_charge_diagram(keysight_channel, fast_v_start, fast_v_stop, n_averages,
 
     asym = trigger_holdoff/scope_duration_compensated  # dead time / meas. time
 
-    # # obsolete next line
-    # additional_sawtooth_amplitude = keysight_amplitude * ((trigger_holdoff)/scope_duration)
-
-
-    keysight_amplitude = abs(fast_v_stop-fast_v_start)
-    key_offset = fast_v_start + keysight_amplitude/2
-    # fast_v_start -= additional_sawtooth_amplitude
+    keysight_amplitudes = []
+    key_offsets = []
+    for i in range(len(fast_v_start)):
+        keysight_amplitudes.append(abs(fast_v_stop[i]-fast_v_start[i]))
+        key_offsets.append(fast_v_start[i] + keysight_amplitudes[i]/2)
 
     zi.scope_channels(3)
     zi.scope_trig_holdoffseconds.set(trigger_holdoff)
@@ -117,39 +188,47 @@ def fast_charge_diagram(keysight_channel, fast_v_start, fast_v_stop, n_averages,
     zi.scope_trig_level.set(zi_trig_level)
     zi.scope_trig_delay.set(zi_trig_delay)
     zi.daq.sync()
-    if keysight_channel == 'ch01':
-        keysight.ch1_function_type('RAMP')
-        keysight.ch1_ramp_symmetry(100*(1-asym))
-        keysight.ch1_phase(180*(1+asym))
-        keysight.ch1_amplitude_unit('VPP')
-        keysight.ch1_amplitude(keysight_amplitude)
-        keysight.ch1_offset(key_offset)
-        keysight.ch1_frequency(key_frequency)
-        keysight.sync_source(1)
-        keysight.ch1_output('ON')
-        
-        #KDP setup Ch2 for compensating sensor
-        # Channels should be coupled, ch 2 output inverted
-        keysight.ch2_function_type('RAMP')
-        keysight.ch2_ramp_symmetry(100*(1-asym))
-        keysight.ch2_phase(180*(1+asym))
-        keysight.ch2_amplitude_unit('VPP')
-        keysight.ch2_amplitude(keysight_amplitude*comp_scale)
-        keysight.ch2_output('ON')
-        keysight.sync_phase()
-        
-    elif keysight_channel == 'ch02':
-        keysight.ch2_function_type('RAMP')
-        keysight.ch2_ramp_symmetry(100*(1-asym))
-        keysight.ch2_phase(180*(1+asym))
-        keysight.ch2_amplitude_unit('VPP')
-        keysight.ch2_amplitude(keysight_amplitude)
-        keysight.ch2_offset(key_offset)
-        keysight.ch2_frequency(key_frequency)
-        keysight.sync_source(2)
-        keysight.ch2_output('ON')
-    else:
-        raise ValueError('Select a valid Keysight channel.')
+
+    def set_keysight(keysight_channel: KeysightChannel, measurement: int=0,
+                     multiplier: float=1.,
+                     phase_offset: float=0.):
+        if multiplier < 0:
+            multiplier = abs(multiplier)
+            keysight_channel.output_polarity('INV')
+        else:
+            keysight_channel.output_polarity('NORM')
+        keysight_channel.function_type('RAMP')
+        keysight_channel.ramp_symmetry(100*(1-asym))
+        keysight_channel.phase(180*(1+asym)+phase_offset)
+        keysight_channel.amplitude_unit('VPP')
+        keysight_channel.amplitude(keysight_amplitudes[measurement]*multiplier)
+        keysight_channel.offset(key_offsets[measurement])
+        keysight_channel.frequency(key_frequency)
+
+    for i, keysight_channel in enumerate(keysight_channels):
+        set_keysight(keysight_channel, i)
+
+    mychannel = keysight_channels[0]
+    channel_num = None
+    if mychannel.short_name == 'ch1':
+        channel_num = 1
+    elif mychannel.short_name == 'ch2':
+        channel_num = 2
+    mychannel._parent.sync_source(channel_num)
+    mychannel._parent.sync_channel_phases()
+
+    if fast_compensation_channels:
+        for fast_compensation_channel in fast_compensation_channels:
+            set_keysight(fast_compensation_channel,
+                         multiplier=fast_compensation_scale,
+                         phase_offset=fast_compensation_phase_offset)
+            fast_compensation_channel._parent.sync_channel_phases()
+
+    for keysight_channel in keysight_channels:
+        keysight_channel.output('ON')
+    if fast_compensation_channels is not None:
+        for fast_compensation_channel in fast_compensation_channels:
+            fast_compensation_channel.output('ON')
 
     scope_avger = []
     zi_averager = {0: zi.scope_avg_ch1,
@@ -166,12 +245,16 @@ def fast_charge_diagram(keysight_channel, fast_v_start, fast_v_stop, n_averages,
 
         try:
             scope_avger.append(zi_averager[ii])
-            prepare_measurement(fast_v_start, fast_v_stop, zi_averager[ii],
-                                qdac_fast_channel, zi_scope_length, zi)
+            if len(keysight_channels) > 1:
+                prepare_measurement(fast_v_start[ii], fast_v_stop[ii], zi_averager[ii],
+                                    qdac_fast_channels[ii], zi_scope_length, zi, add_offset=add_offset)
+            else:
+                prepare_measurement(fast_v_start[0], fast_v_stop[0], zi_averager[ii],
+                                    qdac_fast_channels[0], zi_scope_length, zi, add_offset=add_offset)
         except KeyError:
-            raise ValueError('Invalid scope_channel: {}'.format(ch))
+            raise ValueError('Invalid scope_channel: {}'.format(sig))
 
-    keysight.sync_output('ON')
+    mychannel._parent.sync_output('ON')
     # set up UHFLI
     # zi.scope_mode.set('Time Domain')  # currently done in ZI driver
 
@@ -179,32 +262,50 @@ def fast_charge_diagram(keysight_channel, fast_v_start, fast_v_stop, n_averages,
 
     if print_settings:
         print('keysight frequency: {}'.format(key_frequency))
-        print('keysight amplitude: {}'.format(keysight_amplitude))
-        print('keysight offset: {}'.format(key_offset))
+        print('keysight amplitude: {}'.format(keysight_amplitudes))
+        print('keysight offset: {}'.format(key_offsets))
         print('\n')
         print('zi_samplingrate: {}'.format(zi_samplingrate))
         print('zi_trig_level: {}'.format(zi_trig_level))
         print('zi_trig_delay: {}'.format(zi_trig_delay))
         print('zi_trig_hyst: {}'.format(zi_trig_hyst))
 
-    try:
-        if tasks_to_perform is None:
-            #plot, data = do1d_M(qdac_channel, q_start, q_stop, npoints, delay, scope_avger)
-            plot, data = do1d(qdac_channel, q_start, q_stop, npoints, delay, *scope_avger)
-        else:
-            #plot, data = do1d_M(qdac_channel, q_start, q_stop, npoints, delay, scope_avger, *tasks_to_perform)
-            plot, data = do1d(qdac_channel, q_start, q_stop, npoints, delay, *scope_avger, *tasks_to_perform)
 
-        if keysight_channel == 'ch01':
-            keysight.ch1_output('OFF')
-        elif keysight_channel == 'ch02':
-            keysight.ch2_output('OFF')
+    if len(qdac_channels) > 1:
+        combined_sweep = qc.combine(*qdac_channels, name='combined_qdac_channels')
+        vals1 = np.linspace(q_start[0], q_stop[0], npoints).reshape(npoints, 1)
+        vals2 = np.linspace(q_start[1], q_stop[1], npoints).reshape(npoints, 1)
+        setpoints = np.hstack((vals1, vals2))
+    else:
+        combined_sweep = None
+        setpoints = None
+    try:
+        if len(qdac_channels) > 1:
+            if tasks_to_perform is None:
+                plot, data = do1dcombined(combined_sweep, setpoints, delay, *scope_avger)
+            else:
+                plot, data = do1dcombined(combined_sweep, setpoints, delay, *scope_avger,
+                                          *tasks_to_perform)
+        else:
+            if tasks_to_perform is None:
+                plot, data = do1d(qdac_channels[0], q_start[0], q_stop[0], npoints, delay, *scope_avger)
+            else:
+                plot, data = do1d(qdac_channels[0], q_start[0], q_stop[0], npoints, delay, *scope_avger,
+                                  *tasks_to_perform)
+
+        for channel in keysight_channels:
+            channel.output('OFF')
+        if fast_compensation_channels:
+            for channel in fast_compensation_channels:
+                channel.output('OFF')
 
     except KeyboardInterrupt:
-        if keysight_channel == 'ch01':
-            keysight.ch1_output('OFF')
-        elif keysight_channel == 'ch02':
-            keysight.ch2_output('OFF')
+        for channel in keysight_channels:
+            channel.output('OFF')
+        if fast_compensation_channels:
+            for channel in fast_compensation_channels:
+                channel.output('OFF')
+
         print('Measurement interrupted.')
         raise KeyboardInterrupt
     return plot, data
