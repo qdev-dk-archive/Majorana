@@ -94,10 +94,10 @@ def qdac_slopes():
     QDAC_SLOPES = dict(zip(used_channels(),
                            len(used_channels())*[qdac_slope]))
 
-    QDAC_SLOPES[int(configs.get('Channel Parameters',
-                                'backgate channel'))] = bias_slope
-    for ii in bias_channels():
-        QDAC_SLOPES[ii] = bias_slope
+#    QDAC_SLOPES[int(configs.get('Channel Parameters',
+#                                'backgate channel'))] = bias_slope
+#    for ii in bias_channels():
+#        QDAC_SLOPES[ii] = bias_slope
 
     return QDAC_SLOPES
 
