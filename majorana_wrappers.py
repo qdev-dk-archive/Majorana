@@ -2,7 +2,7 @@ from time import sleep
 from functools import partial
 
 from qcodes.instrument_drivers.devices import VoltageDivider
-
+from qcodes.instrument_drivers.QDev.QDac_channels import QDacChannel
 from qcodes.instrument.parameter import ManualParameter
 from qcodes.instrument.parameter import StandardParameter
 from qcodes.utils.validators import Enum
@@ -11,7 +11,8 @@ import re
 
 import logging
 import os
-logging.basicConfig(filename=os.path.join(os.getcwd(), 'pythonlog.txt'), level=logging.DEBUG)
+import time
+#logging.basicConfig(filename=os.path.join(os.getcwd(), 'pythonlog.txt'), level=logging.DEBUG)
 from qcodes.utils.wrappers import _plot_setup, _save_individual_plots, do1d, do2d
 
 ##################################################
@@ -25,9 +26,9 @@ def print_voltages():
 
     max_col_width = 38
     for channel in used_channels():
-        col_width = max_col_width - len(QDAC[channel].label)
-        mssg = ('Ch {: >2} - {} '.format(channel, QDAC[channel].label) +
-                ': {:>{col_width}}'.format(QDAC[channel].get(),
+        col_width = max_col_width - len(qdac.channels[channel-1].v.label)
+        mssg = ('Ch {: >2} - {} '.format(channel, qdac.channels[channel-1].v.label) +
+                ': {:>{col_width}}'.format(qdac.channels[channel-1].v.get(),
                                            col_width=col_width))
         print(mssg)
 
@@ -36,30 +37,21 @@ def set_all_voltages(voltage):
     """
     Set all AT SAMPLE voltages from QDac channels to the given voltage
     """
-    for channel in range(1, 46):
-        QDAC[channel].set(voltage)
+    qdac.channels.v(voltage)
 
 
 def _unassign_qdac_slope(sweep_parameter):
     """
     Helper function for do1D and do2D to unassign QDac slopes
 
-    The sweep_parameter is either a qdac.chXX_v parameter OR
-    a VoltageDivider instance.
+    The sweep_parameter is a qdac channel
     """
 
-    paramclass = str(sweep_parameter._instrument.__class__) 
-
-    if not paramclass == "<class 'qcodes.instrument_drivers.QDev.QDac.QDac'>":
+    if not isinstance(sweep_parameter._parent, QDac):
         raise ValueError("Can't unassign slope from a non-qdac instrument!")
 
-    # check wether we are dealing with a voltage divider, and if so,
-    # dif out the qdac parameter
-    if isinstance(sweep_parameter, VoltageDivider):
-        sweep_parameter = sweep_parameter.v1
 
-    channel_id = int(re.findall('\d+', sweep_parameter.name)[0])
-    slope_parameter = qdac.parameters['ch{0:02d}_slope'.format(channel_id)]
+    slope_parameter = sweep_parameter.slope
     slope_parameter('Inf')
 
 
@@ -73,15 +65,26 @@ def reset_qdac(sweep_parameters):
 
     for swp in sweep_parameters:
         try:
-            _unassign_qdac_slope(swp)
+            if isinstance(swp, VoltageDivider):
+                # check wether we are dealing with a voltage divider, and if so,
+                # dig out the qdac parameter
+                orig_channel_name = swp._instrument.name
+                print(orig_channel_name)
+                channel_id = int(re.findall('\d+', orig_channel_name)[0])
+                print(channel_id)
+                channel = qdac.channels[channel_id-1]
+                _unassign_qdac_slope(channel)
+            else:
+                channel = swp._instrument
+                _unassign_qdac_slope(channel)
         except ValueError:
             pass
 
 
-def prepare_qdac(qdac_channel, start, stop, n_points, delay, ramp_slope):
+def prepare_qdac(qdac_channel, start, stop, n_points, delay, ramp_slope=None):
     """
     Args:
-        inst_set:  Instrument to sweep over
+        qdac_channel:  Instrument to sweep over
         start:  Start of sweep
         stop:  End of sweep
         division:  Spacing between values
@@ -94,19 +97,19 @@ def prepare_qdac(qdac_channel, start, stop, n_points, delay, ramp_slope):
                           time of the QDac
     """
 
-    channel_id = int(re.findall('\d+', qdac_channel.name)[0])
     if ramp_slope is None:
+        QDAC_SLOPES = qdac_slopes()
+        channel_id = int(re.findall('\d+', qdac_channel.name)[0])
         ramp_slope = QDAC_SLOPES[channel_id]
 
-    slope_parameter = qdac.parameters['ch{0:02d}_slope'.format(channel_id)]
-    slope_parameter(ramp_slope)
+    qdac_channel.slope(ramp_slope)
 
     try:
         init_ramp_time = abs(start-qdac_channel.get())/ramp_slope
     except TypeError:
         init_ramp_time = 0
 
-    qdac_channel.set(start)
+    qdac_channel.v.set(start)
     time.sleep(init_ramp_time)
 
     try:
@@ -120,7 +123,7 @@ def prepare_qdac(qdac_channel, start, stop, n_points, delay, ramp_slope):
 def do1d_M(inst_set, start, stop, n_points, delay, *inst_meas, ramp_slope=None):
     """
     Args:
-        inst_set:  Instrument to sweep over
+        inst_set:  Parameter to sweep over
         start:  Start of sweep
         stop:  End of sweep
         division:  Spacing between values
@@ -132,10 +135,8 @@ def do1d_M(inst_set, start, stop, n_points, delay, *inst_meas, ramp_slope=None):
         plot, data : returns the plot and the dataset
 
     """
-    if str(inst_set._instrument.__class__) == "<class 'qcodes.instrument_drivers.QDev.QDac.QDac'>":
-        channel_id = int(re.findall('\d+', inst_set.name)[0])
-        ramp_qdac(channel_id, start, ramp_slope)
-
+    if isinstance(inst_set._instrument, QDacChannel):
+        ramp_qdac(inst_set._instrument, start, ramp_slope)
 
     plot, data = do1d(inst_set, start, stop, n_points, delay, *inst_meas)
 
@@ -162,15 +163,11 @@ def do2d_M(inst_set, start, stop, n_points, delay, inst_set2, start2, stop2,
     Returns:
         plot, data : returns the plot and the dataset
     """
+    if isinstance(inst_set2._instrument, QDacChannel):
+        ramp_qdac(inst_set2._instrument, start, ramp_slope2)
 
-    if str(inst_set2._instrument.__class__) == "<class 'qcodes.instrument_drivers.QDev.QDac.QDac'>":
-        channel_id = int(re.findall('\d+', inst_set2.name)[0])
-        ramp_qdac(channel_id, start, ramp_slope1)
-
-    # FUGLY hack... but how to do it properly?
-    if str(inst_set._instrument.__class__) == "<class 'qcodes.instrument_drivers.QDev.QDac.QDac'>":
-        channel_id = int(re.findall('\d+', inst_set.name)[0])
-        ramp_qdac(channel_id, start, ramp_slope1)
+    if isinstance(inst_set._instrument, QDacChannel):
+        ramp_qdac(inst_set._instrument, start, ramp_slope1)
 
     for inst in inst_meas:
         if getattr(inst, "setpoints", False):
@@ -185,27 +182,27 @@ def ramp_qdac(chan, target_voltage, slope=None):
     Ramp a qdac channel. Blocking.
 
     Args:
-        chan (int): channel number
+        chan: QDac Channel
         target_voltage (float): Voltage to ramp to
-        slope (Optional[float]): The slope in (V/s). If None, a slope is
-            fetched from the QDAC dict
+        slope (float): The slope in (V/s)
     """
-
     if slope is None:
         try:
-            slope = QDAC_SLOPES[chan]
+            QDAC_SLOPES = qdac_slopes()
+            channel_id = int(re.findall('\d+', chan.name)[0])
+            slope = QDAC_SLOPES[channel_id]
         except KeyError:
             raise ValueError('No slope found in QDAC_SLOPES. '
                              'Please provide a slope!')
 
     # Make the ramp blocking, so that we may unassign the slope
-    ramp_time = abs(qdac.parameters['ch{:02}_v'.format(chan)].get() -
+    ramp_time = abs(chan.v.get() -
                     target_voltage)/slope + 0.03
 
-    qdac.parameters['ch{:02}_slope'.format(chan)].set(slope)
-    qdac.parameters['ch{:02}_v'.format(chan)].set(target_voltage)
+    chan.slope.set(slope)
+    chan.v.set(target_voltage)
     sleep(ramp_time)
-    qdac.parameters['ch{:02}_slope'.format(chan)].set('Inf')
+    chan.slope.set('Inf')
 
 
 def ramp_several_qdac_channels(loc, target_voltage, slope=None):
@@ -215,8 +212,7 @@ def ramp_several_qdac_channels(loc, target_voltage, slope=None):
     Args:
         loc (list): List of channels to ramp
         target_voltage (float): Voltage to ramp to
-        slope (Optional[float]): The slope in (V/s). If None, a slope is
-            fetched from the QDAC dict
+        slope (float): The slope in (V/s)
     """
-    for ch in range(0,len(loc)):
-        ramp_qdac(loc[ch], target_voltage, slope)
+    for ch in loc:
+        ramp_qdac(ch, target_voltage, slope)
