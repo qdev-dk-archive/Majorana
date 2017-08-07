@@ -41,20 +41,30 @@ import qcodes.instrument_drivers.tektronix.Keithley_2600 as keith
 import qcodes.instrument_drivers.rohde_schwarz.SGS100A as sg
 import qcodes.instrument_drivers.tektronix.AWG5014 as awg
 import qcodes.instrument_drivers.HP.HP8133A as hpsg
-import qcodes.instrument_drivers.rohde_schwarz.ZNB20 as vna
+import qcodes.instrument_drivers.rohde_schwarz.ZNB as vna
 
 import logging
 import re
 import time
 from functools import partial
+import atexit
 
 if __name__ == '__main__':
+
+    #logging.basicConfig(filename=os.path.join(os.getcwd(), 'pythonlog.txt'), level=logging.DEBUG)
 
     init_log = logging.getLogger(__name__)
 
     # import T10_setup as t10
     config = Config('A:\qcodes_experiments\modules\Majorana\sample.config')
 
+    def close_station(station):
+        for comp in station.components:
+            print("Closing connection to {}".format(comp))
+            qc.Instrument.find_instrument(comp).close()
+
+    if qc.Station.default:
+        close_station(qc.Station.default)
 
     # Initialisation of intruments
     qdac = QDAC_T10('qdac', 'ASRL8::INSTR', config, update_currents=False)
@@ -97,6 +107,7 @@ if __name__ == '__main__':
     end = time.time()
     print("Querying took {} s".format(end-start))
     # Initialisation of the experiment
+
     end = time.time()
     print("done Querying all instruments took {}".format(end-start))
     qc.init("./MajoQubit", "DVZ_MCQ002B1", STATION)
@@ -140,3 +151,5 @@ if __name__ == '__main__':
     zi.signal_output2_amplitude(-50)
     zi.signal_output2_offset(0)
  
+    # Try to close all instruments when exiting
+    atexit.register(close_station, STATION)
