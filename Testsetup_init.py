@@ -15,7 +15,7 @@ import qcodes.instrument_drivers.tektronix.Keithley_2600 as keith
 import qcodes.instrument_drivers.rohde_schwarz.SGS100A as sg
 import qcodes.instrument_drivers.tektronix.AWG5014 as awg
 import qcodes.instrument_drivers.HP.HP8133A as hpsg
-import qcodes.instrument_drivers.rohde_schwarz.ZNB20 as vna
+import qcodes.instrument_drivers.rohde_schwarz.ZNB as vna
 
 import logging
 import re
@@ -26,7 +26,7 @@ from majorana_wrappers import *
 from reload_settings import *
 from customised_instruments import *
 
-
+import atexit
 
 if __name__ == '__main__':
 
@@ -35,6 +35,13 @@ if __name__ == '__main__':
     # import T10_setup as t10
     config = Config('sample.config')
 
+    def close_station(station):
+        for comp in station.components:
+            print("Closing connection to {}".format(comp))
+            qc.Instrument.find_instrument(comp).close()
+
+    if qc.Station.default:
+        close_station(qc.Station.default)
 
     # Initialisation of intruments
     qdac = QDAC_T10('qdac', 'ASRL6::INSTR', config, update_currents=False)
@@ -47,13 +54,15 @@ if __name__ == '__main__':
     keysightdmm_1 = Keysight_34465A_T10('keysight_dmm_1',
                                         'TCPIP0::192.168.15.110::inst0::INSTR')
     keysightdmm_2 = Keysight_34465A_T10('keysight_dmm_2',
-                                        'TCPIP0::192.168.15.115::inst0::INSTR')    
+                                        'TCPIP0::192.168.15.115::inst0::INSTR')
+    keysightdmm_3 = Keysight_34465A_T10('keysight_dmm_3',
+                                        'TCPIP0::192.168.15.117::inst0::INSTR')
     keithley_1 = keith.Keithley_2600('keithley_1',
                                      'TCPIP0::192.168.15.114::inst0::INSTR',
                                      "a")
     keithley_2 = keith.Keithley_2600('keithley_2',
                                      'TCPIP0::192.168.15.116::inst0::INSTR',
-                                     "a")    
+                                     "a")
 
     print('Querying all instrument parameters for metadata.'
           'This may take a while...')
@@ -61,10 +70,14 @@ if __name__ == '__main__':
     start = time.time()
     STATION = qc.Station(qdac, lockin, zi, 
                          keysightgen_1, keysightgen_2, 
-                         keysightdmm_1, keysightdmm_2,
+                         keysightdmm_1, keysightdmm_2, keysightdmm_3,
                          keithley_1, keithley_2)
+
     end = time.time()
     print("Querying took {} s".format(end-start))
-    # Initialisation of the experiment
 
+    # Try to close all instruments when exiting
+    atexit.register(close_station, STATION)
+
+    # Initialisation of the experiment
     qc.init("./MajoQubit", "DVZ_MCQ002A1", STATION, annotate_image=False)
