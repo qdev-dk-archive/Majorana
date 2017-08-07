@@ -7,13 +7,12 @@ import numpy as np
 import qcodes as qc
 from qcodes.instrument.parameter import Parameter
 from qcodes.utils.wrappers import _do_measurement
-from qcodes.instrument_drivers.QDev.QDac import QDac
 from qcodes.instrument_drivers.QDev.QDac_channels import QDac as QDacch
 
 try:
-    from modules.Majorana.Experiment_init import SR830_T10
+    from modules.Majorana.customised_instruments import SR830_T10
 except ImportError:
-    from Experiment_init import SR830_T10
+    from customised_instruments import SR830_T10
 
 def do2Dconductance(outer_param: Parameter,
                     outer_start: Union[float, int],
@@ -49,10 +48,14 @@ def do2Dconductance(outer_param: Parameter,
     if sr.name not in station.components:
         raise KeyError('Unknown lock-in! Refusing to proceed until the '
                        'lock-in has been added to the station.')
-    if outer_param._instrument.name not in station.components:
+    if (outer_param._instrument.name not in station.components and
+        outer_param._instrument._parent.name not in station.components):
+        print(outer_param._instrument._parent.name)
+        print(station.components)
         raise KeyError('Unknown instrument for outer parameter. '
                        'Please add that instrument to the station.')
-    if inner_param._instrument.name not in station.components:
+    if (inner_param._instrument.name not in station.components and
+        inner_param._instrument._parent.name not in station.components):
         raise KeyError('Unknown instrument for inner parameter. '
                        'Please add that instrument to the station.')
 
@@ -116,14 +119,12 @@ def do2Dconductance(outer_param: Parameter,
     qdac = None
     # ensure that any waveform generator is unbound from the qdac channels that we step if
     # we are stepping the qdac
-    if isinstance(inner_param._instrument, QDac) or isinstance(inner_param._instrument, QDacch):
-        qdac = inner_param._instrument
-        # remove this stupid hack once we have real channels
-        qdac.parameters["ch{}_slope".format(inner_param.name[2:4])]('Inf')
-    if isinstance(outer_param._instrument, QDac) or isinstance(outer_param._instrument, QDacch):
-        qdac = outer_param._instrument
-        # remove this stupid hack once we have real channels
-        qdac.parameters["ch{}_slope".format(outer_param.name[2:4])]('Inf')
+    if isinstance(inner_param._instrument, QDacch):
+        qdacch = inner_param._instrument
+        qdacch.slope('Inf')
+    if isinstance(outer_param._instrument, QDacch):
+        qdacch = outer_param._instrument
+        qdacch.slope('Inf')
     if qdac:
         qdac.fast_voltage_set(True)  # now that we have unbound the function generators
                                      # we don't need to do it in the loop
