@@ -19,7 +19,8 @@ def bias_channels():
     # bias_chan2 = configs.get('Channel Parameters', 'left sensor bias channel')
     # bias_chan3 = configs.get('Channel Parameters', 'right sensor bias channel')
 
-    return [int(bias_chan1), int(bias_chan2), int(bias_chan3)]
+    #return [int(bias_chan1), int(bias_chan2), int(bias_chan3)]
+    return [int(bias_chan1)]
 
 
 def used_channels():
