@@ -12,8 +12,9 @@ import re
 import logging
 import os
 import time
-#logging.basicConfig(filename=os.path.join(os.getcwd(), 'pythonlog.txt'), level=logging.DEBUG)
+
 from qcodes.utils.wrappers import _plot_setup, _save_individual_plots, do1d, do2d
+from reload_settings import used_channels
 
 ##################################################
 # Helper functions and wrappers
