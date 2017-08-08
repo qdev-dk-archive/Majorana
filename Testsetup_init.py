@@ -28,6 +28,9 @@ from customised_instruments import *
 
 import atexit
 
+from conductance_measurements import do2Dconductance
+from fast_diagrams import fast_charge_diagram 
+
 if __name__ == '__main__':
 
     init_log = logging.getLogger(__name__)
@@ -38,7 +41,10 @@ if __name__ == '__main__':
     def close_station(station):
         for comp in station.components:
             print("Closing connection to {}".format(comp))
-            qc.Instrument.find_instrument(comp).close()
+            try:
+                qc.Instrument.find_instrument(comp).close()
+            except KeyError:
+                pass
 
     if qc.Station.default:
         close_station(qc.Station.default)
@@ -46,12 +52,12 @@ if __name__ == '__main__':
     # Initialisation of intruments
     qdac = QDAC_T10('qdac', 'ASRL6::INSTR', config, update_currents=False)
     lockin = SR830_T10('lockin_topo', 'GPIB0::8::INSTR')
-    zi = ZIUHFLI('ziuhfli', 'dev2235')
+    zi = ZIUHFLI_T10('ziuhfli', 'dev2235')
     keysightgen_1 = Keysight_33500B('keysight_gen_1',
                                     'TCPIP0::192.168.15.108::inst0::INSTR')
     keysightgen_2 = Keysight_33500B('keysight_gen_2',
                                     'TCPIP0::192.168.15.112::inst0::INSTR')
-    keysightdmm_1 = Keysight_34465A_T10('keysight_dmm_1',
+    keysightdmm_1 = Keysight_34465A_T10('keysight_dmm_top',
                                         'TCPIP0::192.168.15.110::inst0::INSTR')
     keysightdmm_2 = Keysight_34465A_T10('keysight_dmm_2',
                                         'TCPIP0::192.168.15.115::inst0::INSTR')
@@ -69,7 +75,7 @@ if __name__ == '__main__':
 
     start = time.time()
     STATION = qc.Station(qdac, lockin, zi, 
-                         keysightgen_1, keysightgen_2, 
+                         keysightgen_1, keysightgen_2,
                          keysightdmm_1, keysightdmm_2, keysightdmm_3,
                          keithley_1, keithley_2)
 
@@ -80,4 +86,9 @@ if __name__ == '__main__':
     atexit.register(close_station, STATION)
 
     # Initialisation of the experiment
-    qc.init("./MajoQubit", "DVZ_MCQ002A1", STATION, annotate_image=False)
+    qc.init("./MajoQubit", "DVZ_MCQ002A1", STATION, annotate_image=False, 
+            display_pdf=False, display_individual_pdf=False)
+
+    reload_QDAC_settings()
+#    reload_SR830_settings()
+    reload_DMM_settings()

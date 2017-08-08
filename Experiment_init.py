@@ -49,6 +49,8 @@ import time
 from functools import partial
 import atexit
 
+from modules.Majorana.conductance_measurements import do2Dconductance
+
 if __name__ == '__main__':
 
     #logging.basicConfig(filename=os.path.join(os.getcwd(), 'pythonlog.txt'), level=logging.DEBUG)
@@ -61,7 +63,11 @@ if __name__ == '__main__':
     def close_station(station):
         for comp in station.components:
             print("Closing connection to {}".format(comp))
-            qc.Instrument.find_instrument(comp).close()
+            try:
+                qc.Instrument.find_instrument(comp).close()
+            except KeyError:
+                pass
+
 
     if qc.Station.default:
         close_station(qc.Station.default)

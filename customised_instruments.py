@@ -4,15 +4,58 @@ Created on Fri Aug  4 11:06:56 2017
 
 @author: Jens
 """
+import numpy as np
 
-# A conductance buffer, needed for the faster 2D conductance measurements
-# (Dave Wecker style)
 from qcodes.instrument_drivers.QDev.QDac_channels import QDac
 from qcodes.instrument_drivers.stanford_research.SR830 import SR830
 from qcodes.instrument_drivers.stanford_research.SR830 import ChannelBuffer
 from qcodes.instrument_drivers.Keysight.Keysight_34465A import Keysight_34465A
 from qcodes.instrument_drivers.devices import VoltageDivider
+from qcodes.instrument_drivers.ZI.ZIUHFLI import ZIUHFLI
+from qcodes import ArrayParameter
 
+class Scope_avg(ArrayParameter):
+
+    def __init__(self, name, channel=1, **kwargs):
+
+        super().__init__(name, shape=(1,), **kwargs)
+        self.has_setpoints = False
+        self.zi = self._instrument
+
+        if not channel in [1, 2]:
+            raise ValueError('Channel must be 1 or 2')
+
+        self.channel = channel
+
+    def make_setpoints(self, sp_start, sp_stop, sp_npts):
+        """
+        Makes setpoints and prepares the averager (updates its unit)
+        """
+        self.shape = (sp_npts,)
+        self.unit = self._instrument.Scope.units[self.channel-1]
+        self.setpoints = (tuple(np.linspace(sp_start, sp_stop, sp_npts)),)
+        self.has_setpoints = True
+
+    def get(self):
+
+        if not self.has_setpoints:
+            raise ValueError('Setpoints not made. Run make_setpoints')
+
+        data = self._instrument.Scope.get()[self.channel-1]
+        data_avg = np.mean(data, 0)
+
+        # KDP: handle less than 4096 points
+        # (4096 needs to be multiple of number of points)
+        down_samp = np.int(self._instrument.scope_length.get()/self.shape[0])
+        if down_samp > 1:
+            data_ret = data_avg[::down_samp]
+        else:
+            data_ret = data_avg
+
+        return data_ret
+
+# A conductance buffer, needed for the faster 2D conductance measurements
+# (Dave Wecker style)
 class ConductanceBuffer(ChannelBuffer):
     """
     A full-buffered version of the conductance based on an
@@ -160,3 +203,17 @@ class Keysight_34465A_T10(Keysight_34465A):
         get_cmd for dmm readout of IV_TAMP parameter
         """
         return self.volt()/self.iv_conv*1E12
+
+class ZIUHFLI_T10(ZIUHFLI):
+
+    def __init__(self, name, address, **kwargs):
+        super().__init__(name, address, **kwargs)
+
+        self.add_parameter('scope_avg_ch1',
+                           channel=1,
+                           label='',
+                           parameter_class=Scope_avg)
+        self.add_parameter('scope_avg_ch2',
+                           channel=2,
+                           label='',
+                           parameter_class=Scope_avg)
