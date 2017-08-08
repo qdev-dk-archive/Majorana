@@ -64,6 +64,8 @@ def do2Dconductance(outer_param: Parameter,
     # Some of these things have to be repeated during the loop
     sr.buffer_reset()
     sr.buffer_start()
+    #sr.buffer_trig_mode('ON')
+    sr.buffer_SR('Trigger')
     sr.conductance.shape = (inner_npts,)
     sr.conductance.setpoint_names = (inner_param.name,)
     sr.conductance.setpoint_labels = (inner_param.label,)
@@ -126,4 +128,4 @@ def do2Dconductance(outer_param: Parameter,
         qdac.fast_voltage_set(True)  # now that we have unbound the function generators
                                      # we don't need to do it in the loop
         qdac.voltage_set_dont_wait(False)  # this is un safe and highly experimental
-    _do_measurement(outer_loop, set_params, meas_params, do_plots=False)
+    _do_measurement(outer_loop, set_params, meas_params, do_plots=True)

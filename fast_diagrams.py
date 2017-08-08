@@ -28,10 +28,19 @@ class Scope_avg(ArrayParameter):
 
         if not self.has_setpoints:
             raise ValueError('Setpoints not made. Run make_setpoints')
-
+        
         data = self._instrument.Scope.get()[self.channel-1]
-        return np.mean(data, 0)
+        data_avg = np.mean(data, 0)
 
+        # KDP: handle less than 4096 points 
+        # (4096 needs to be multiple of number of points)
+        down_samp = np.int(self._instrument.scope_length.get()/self.shape[0])
+        if down_samp > 1:
+            data_ret = data_avg[::down_samp]
+        else:
+            data_ret = data_avg   
+
+        return data_ret
 
 try:
     zi.add_parameter('scope_avg_ch1',
@@ -50,7 +59,8 @@ except KeyError:
     pass
 
 
-def prepare_measurement(keysight_low_V, keysight_high_V, scope_avger, qdac_fast_channel):
+
+def prepare_measurement(keysight_low_V, keysight_high_V, scope_avger, qdac_fast_channel, npts):
     """
     Args:
         keysight_low_V (float): keysight ramp start value
@@ -60,13 +70,13 @@ def prepare_measurement(keysight_low_V, keysight_high_V, scope_avger, qdac_fast_
             the Keysight ramp
     """
     zi.Scope.prepare_scope()
-    npts = zi.scope_length()
+    #npts = zi.scope_length()
     
-    offset = 0 # qdac.parameters['ch{:02}_v'.format(qdac_fast_channel)].get()
+    offset = 0 # qdac_fast_channel.get()
 
     scope_avger.make_setpoints(keysight_low_V+offset, keysight_high_V+offset, npts)
     scope_avger.setpoint_names = ('keysight_voltage',)
-    scope_avger.setpoint_labels = ('Fast {}'.format(QDAC[qdac_fast_channel].label),)
+    scope_avger.setpoint_labels = ('Fast {}'.format(qdac_fast_channel.label),)
     scope_avger.setpoint_units = ('V',)
 
     # zi.scope_avg_ch1.make_setpoints(keysight_low_V, keysight_high_V, npts)
@@ -77,7 +87,7 @@ def prepare_measurement(keysight_low_V, keysight_high_V, scope_avger, qdac_fast_
 
 
 def fast_charge_diagram(keysight_channel, fast_v_start, fast_v_stop, n_averages,
-                        qdac_channel, q_start, q_stop, npoints, delay, qdac_fast_channel,
+                        qdac_channel, q_start, q_stop, npoints, delay, qdac_fast_channel, comp_scale,
                         scope_signal, zi_trig_signal='Trig Input 1',
                         trigger_holdoff=60e-6, zi_samplingrate='14.0 MHz', zi_scope_length=4096,
                         zi_trig_hyst=0, zi_trig_level=.5, zi_trig_delay = 0, print_settings=False,
@@ -117,7 +127,13 @@ def fast_charge_diagram(keysight_channel, fast_v_start, fast_v_stop, n_averages,
     # and keysight frequency.
 
     zi.scope_samplingrate.set(zi_samplingrate)
-    zi.scope_length.set(zi_scope_length)
+    
+    # KDP: allow for fewer points than the UHFLI 4096  min.
+    if zi_scope_length < 4096:
+        zi.scope_length.set(4096)
+    else:
+        zi.scope_length.set(zi_scope_length)
+    
     zi.daq.sync()
 
     scope_duration = zi.scope_duration()
@@ -164,6 +180,17 @@ def fast_charge_diagram(keysight_channel, fast_v_start, fast_v_stop, n_averages,
         keysight.ch1_frequency(key_frequency)
         keysight.sync_source(1)
         keysight.ch1_output('ON')
+        
+        #KDP setup Ch2 for compensating sensor
+        # Channels should be coupled, ch 2 output inverted
+        keysight.ch2_function_type('RAMP')
+        keysight.ch2_ramp_symmetry(100*(1-asym))
+        keysight.ch2_phase(180*(1+asym))  
+        keysight.ch2_amplitude_unit('VPP')
+        keysight.ch2_amplitude(keysight_amplitude*comp_scale)
+        keysight.ch2_output('ON') 
+        keysight.sync_phase()
+        
     elif keysight_channel == 'ch02':
         keysight.ch2_function_type('RAMP')
         keysight.ch2_ramp_symmetry(100*(1-asym))
@@ -193,7 +220,7 @@ def fast_charge_diagram(keysight_channel, fast_v_start, fast_v_stop, n_averages,
         try:
             scope_avger.append(zi_averager[ii])
             prepare_measurement(fast_v_start, fast_v_stop, zi_averager[ii],
-                                qdac_fast_channel)
+                                qdac_fast_channel, zi_scope_length)
         except KeyError:
             raise ValueError('Invalid scope_channel: {}'.format(ch))
 
