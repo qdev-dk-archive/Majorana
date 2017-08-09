@@ -31,9 +31,7 @@ import qcodes.instrument_drivers.tektronix.AWG5014 as awg
 from modules.pulsebuilding import broadbean as bb
 from qcodes.instrument_drivers.oxford.mercuryiPS import MercuryiPS
 import qcodes.instrument_drivers.HP .HP8133A as hpsg
-#import qcodes.instrument_drivers.rohde_schwarz.ZNB20 as vna
-
-from qcodes.instrument_drivers.oxford.mercuryiPS import MercuryiPS
+import qcodes.instrument_drivers.rohde_schwarz.ZNB as vna
 
 from qcodes.utils.configreader import Config
 
