@@ -9,10 +9,7 @@ from qcodes.instrument.parameter import Parameter
 from qcodes.utils.wrappers import _do_measurement
 from qcodes.instrument_drivers.QDev.QDac_channels import QDac as QDacch
 
-try:
-    from modules.Majorana.customised_instruments import SR830_T10
-except ImportError:
-    from customised_instruments import SR830_T10
+from customised_instruments import SR830_T10
 
 def do2Dconductance(outer_param: Parameter,
                     outer_start: Union[float, int],
