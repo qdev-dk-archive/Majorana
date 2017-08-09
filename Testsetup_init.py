@@ -31,6 +31,12 @@ import atexit
 from conductance_measurements import do2Dconductance
 from fast_diagrams import fast_charge_diagram 
 
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+mpl.rcParams['figure.figsize'] = (8, 3)
+mpl.rcParams['figure.subplot.bottom'] = 0.15
+mpl.rcParams['font.size'] = 8
+
 if __name__ == '__main__':
 
     init_log = logging.getLogger(__name__)

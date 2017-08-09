@@ -124,4 +124,5 @@ def do2Dconductance(outer_param: Parameter,
         qdac.fast_voltage_set(True)  # now that we have unbound the function generators
                                      # we don't need to do it in the loop
         qdac.voltage_set_dont_wait(False)  # this is un safe and highly experimental
-    _do_measurement(outer_loop, set_params, meas_params, do_plots=True)
+    plot, data = _do_measurement(outer_loop, set_params, meas_params, do_plots=True)
+    return plot, data

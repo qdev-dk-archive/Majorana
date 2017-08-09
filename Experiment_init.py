@@ -10,6 +10,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 mpl.rcParams['figure.figsize'] = (8, 3)
 mpl.rcParams['figure.subplot.bottom'] = 0.15 
+mpl.rcParams['font.size'] = 8
 
 from qcodes.utils.configreader import Config
 from qcodes.utils.wrappers import show_num
