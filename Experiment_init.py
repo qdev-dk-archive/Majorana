@@ -35,12 +35,6 @@ import qcodes.instrument_drivers.rohde_schwarz.ZNB as vna
 
 from qcodes.utils.configreader import Config
 
-import qcodes.instrument_drivers.tektronix.Keithley_2600 as keith
-import qcodes.instrument_drivers.rohde_schwarz.SGS100A as sg
-import qcodes.instrument_drivers.tektronix.AWG5014 as awg
-import qcodes.instrument_drivers.HP.HP8133A as hpsg
-import qcodes.instrument_drivers.rohde_schwarz.ZNB as vna
-
 import logging
 import re
 import time
