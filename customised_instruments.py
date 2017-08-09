@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Aug  4 11:06:56 2017
-
-@author: Jens
+Customised instruments with extra features such as voltage dividers and derived
+parameters for use with T10
 """
 import numpy as np
 

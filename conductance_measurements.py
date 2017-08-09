@@ -50,8 +50,6 @@ def do2Dconductance(outer_param: Parameter,
                        'lock-in has been added to the station.')
     if (outer_param._instrument.name not in station.components and
         outer_param._instrument._parent.name not in station.components):
-        print(outer_param._instrument._parent.name)
-        print(station.components)
         raise KeyError('Unknown instrument for outer parameter. '
                        'Please add that instrument to the station.')
     if (inner_param._instrument.name not in station.components and

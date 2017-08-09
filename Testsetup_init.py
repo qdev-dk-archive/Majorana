@@ -36,7 +36,8 @@ if __name__ == '__main__':
     init_log = logging.getLogger(__name__)
 
     # import T10_setup as t10
-    config = Config('sample.config')
+    # config = Config('C:\Users\Jens\Majorana\sample.config')
+    config = Config('../Majorana/sample.config')
 
     def close_station(station):
         for comp in station.components:
@@ -53,8 +54,9 @@ if __name__ == '__main__':
     qdac = QDAC_T10('qdac', 'ASRL6::INSTR', config, update_currents=False)
     lockin = SR830_T10('lockin_topo', 'GPIB0::8::INSTR')
     zi = ZIUHFLI_T10('ziuhfli', 'dev2235')
-    keysightgen_1 = Keysight_33500B('keysight_gen_1',
+    keysightgen_left = Keysight_33500B('keysight_gen_left',
                                     'TCPIP0::192.168.15.108::inst0::INSTR')
+    keysightgen_left.add_function('sync_phase',call_cmd='SOURce1:PHASe:SYNChronize')
     keysightgen_2 = Keysight_33500B('keysight_gen_2',
                                     'TCPIP0::192.168.15.112::inst0::INSTR')
     keysightdmm_1 = Keysight_34465A_T10('keysight_dmm_top',
@@ -75,7 +77,7 @@ if __name__ == '__main__':
 
     start = time.time()
     STATION = qc.Station(qdac, lockin, zi, 
-                         keysightgen_1, keysightgen_2,
+                         keysightgen_left, keysightgen_2,
                          keysightdmm_1, keysightdmm_2, keysightdmm_3,
                          keithley_1, keithley_2)
 

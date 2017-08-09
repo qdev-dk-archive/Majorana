@@ -1,4 +1,5 @@
 from qcodes.utils.wrappers import do1d
+import qcodes as qc
 
 def prepare_measurement(keysight_low_V, keysight_high_V, scope_avger, qdac_fast_channel, npts, zi, add_offset: bool=True):
     """
@@ -56,6 +57,10 @@ def fast_charge_diagram(keysight_channel, fast_v_start, fast_v_stop, n_averages,
                        For Keysight sawtooth it is 6e-7s.
     """
 
+    if zi is None:
+        zi = qc.Instrument.find_instrument('ziuhfli')
+    if keysight is None:
+        keysight = qc.Instrument.find_instrument('keysight_gen_left')
     if keysight_channel not in ['ch01', 'ch02']:
         raise ValueError('Invalid keysight channel. Must be either "ch01" or "ch02".')
 
@@ -127,10 +132,10 @@ def fast_charge_diagram(keysight_channel, fast_v_start, fast_v_stop, n_averages,
         # Channels should be coupled, ch 2 output inverted
         keysight.ch2_function_type('RAMP')
         keysight.ch2_ramp_symmetry(100*(1-asym))
-        keysight.ch2_phase(180*(1+asym))  
+        keysight.ch2_phase(180*(1+asym))
         keysight.ch2_amplitude_unit('VPP')
         keysight.ch2_amplitude(keysight_amplitude*comp_scale)
-        keysight.ch2_output('ON') 
+        keysight.ch2_output('ON')
         keysight.sync_phase()
         
     elif keysight_channel == 'ch02':
@@ -200,7 +205,6 @@ def fast_charge_diagram(keysight_channel, fast_v_start, fast_v_stop, n_averages,
             keysight.ch1_output('OFF')
         elif keysight_channel == 'ch02':
             keysight.ch2_output('OFF')
-
         print('Measurement interrupted.')
-
+        raise KeyboardInterrupt
     return plot, data

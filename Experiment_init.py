@@ -13,9 +13,9 @@ mpl.rcParams['figure.subplot.bottom'] = 0.15
 
 from qcodes.utils.configreader import Config
 from qcodes.utils.wrappers import show_num
-from modules.Majorana.majorana_wrappers import *
-from modules.Majorana.reload_settings import *
-from modules.Majorana.customised_instruments import *
+from majorana_wrappers import *
+from reload_settings import *
+from customised_instruments import *
 
 from qcodes.instrument_drivers.QDev.QDac_channels import QDac
 from qcodes.instrument_drivers.stanford_research.SR830 import SR830
@@ -49,7 +49,8 @@ import time
 from functools import partial
 import atexit
 
-from modules.Majorana.conductance_measurements import do2Dconductance
+from conductance_measurements import do2Dconductance
+from fast_diagrams import fast_charge_diagram
 
 if __name__ == '__main__':
 
@@ -107,7 +108,7 @@ if __name__ == '__main__':
     STATION = qc.Station(qdac, lockin_topo, lockin_right, lockin_left,
                          keysightgen_left, keysightgen_mid, keithleybot_a,
                          keysightdmm_mid, keysightdmm_bot,
-                         #keysightdmm_top, keysightdmm_mid, keysightdmm_bot,
+                         keysightdmm_top, keysightdmm_mid, keysightdmm_bot,
                          awg1, awg2, zi, mercury, sg1, hpsg1)# keysightgen_pulse)
 
     end = time.time()
