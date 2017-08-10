@@ -71,7 +71,7 @@ if __name__ == '__main__':
     lockin_topo = SR830_T10('lockin_topo', 'GPIB10::7::INSTR')
     lockin_left = SR830_T10('lockin_l', 'GPIB10::10::INSTR')
     lockin_right = SR830_T10('lockin_r', 'GPIB10::14::INSTR')
-    zi = ZIUHFLI('ziuhfli', 'dev2189')
+    zi = ZIUHFLI_T10('ziuhfli', 'dev2189')
     keysightgen_left = Keysight_33500B('keysight_gen_left', 'TCPIP0::192.168.15.101::inst0::INSTR')
     keysightgen_left.add_function('sync_phase',call_cmd='SOURce1:PHASe:SYNChronize')
     keysightgen_mid = Keysight_33500B('keysight_gen_mid', 'TCPIP0::192.168.15.114::inst0::INSTR')
