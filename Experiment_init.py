@@ -75,9 +75,8 @@ if __name__ == '__main__':
     lockin_right = SR830_T10('lockin_r', 'GPIB10::14::INSTR')
     zi = ZIUHFLI_T10('ziuhfli', 'dev2189')
 
-    keysightgen_left = Keysight_33500B('keysight_gen_left', 'TCPIP0::192.168.15.101::inst0::INSTR')
-    keysightgen_left.add_function('sync_phase',call_cmd='SOURce1:PHASe:SYNChronize')
-    keysightgen_mid = Keysight_33500B('keysight_gen_mid', 'TCPIP0::192.168.15.114::inst0::INSTR')
+    keysightgen_left = Keysight_33500B_Channels('keysight_gen_left', 'TCPIP0::192.168.15.101::inst0::INSTR')
+    keysightgen_mid = Keysight_33500B_Channels('keysight_gen_mid', 'TCPIP0::192.168.15.114::inst0::INSTR')
     #keysightdmm_top = Keysight_34465A_T10('keysight_dmm_top', 'TCPIP0::192.168.15.111::inst0::INSTR')
     keysightdmm_mid = Keysight_34465A_T10('keysight_dmm_mid', 'TCPIP0::192.168.15.112::inst0::INSTR')
     keysightdmm_bot = Keysight_34465A_T10('keysight_dmm_bot','TCPIP0::192.168.15.113::inst0::INSTR')

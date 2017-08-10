@@ -50,7 +50,7 @@ def arrayify_args(f):
                              'qdac_channels', 'q_start', 'q_stop',
                              'qdac_fast_channels')
         compensation_args = ('fast_compensation_channels',
-                             'fast_compensation_scale',
+                             'comp_scale',
                              'fast_compensation_phase_offset')
         scope_args = ('scope_signal',)
         args_to_arrayify = main_channel_args + scope_args
@@ -88,7 +88,7 @@ def fast_charge_diagram(keysight_channels: Union[Sequence[KeysightChannel], Keys
                         q_start: num_or_list_of_num=None, q_stop: num_or_list_of_num=None,
                         npoints: int=None, delay: number=None,
                         qdac_fast_channels: Union[Sequence[StandardParameter], StandardParameter]=None,
-                        comp_scale,
+                        comp_scale: float=1,
                         scope_signal: Union[Sequence[str], str]=None,
                         zi: ZIUHFLI_T10=None, zi_trig_signal: str='Trig Input 1',
                         trigger_holdoff: float=60e-6,
@@ -99,10 +99,8 @@ def fast_charge_diagram(keysight_channels: Union[Sequence[KeysightChannel], Keys
                         zi_trig_delay: float=0.,
                         print_settings: bool=False,
                         add_offset: bool=True,
-                        zi=None, keysight=None,
                         tasks_to_perform: Optional[Sequence[qc.Task]]=None,
                         fast_compensation_channels: Optional[Union[Sequence[KeysightChannel], KeysightChannel]]=None,
-                        fast_compensation_scale: float=-1.,
                         fast_compensation_phase_offset: float=0.):
     """
     Args:
@@ -116,6 +114,8 @@ def fast_charge_diagram(keysight_channels: Union[Sequence[KeysightChannel], Keys
         npoints: Number of points in QDac scan
         delay: time to wait between each slow axis step
         qdac_fast_channels:
+        comp_scale: The fast compensation is the output multiplied by this constant.
+                    Minus means that output is inverted.
         scope_signal:
         zi:
         zi_trig_signal: Which input to trigger on
@@ -131,14 +131,10 @@ def fast_charge_diagram(keysight_channels: Union[Sequence[KeysightChannel], Keys
             voltage
         tasks_to_perform: tasks that are performed at each slow measurement. Such as compensating a gate
         fast_compensation_channels: Channels to use for compensation of fast voltage sweep.
-        fast_compensation_scale: The fast compensation is the output multiplied by this constant.
-            Minus means that output is inverted.
         fast_compensation_phase_offset: Phase offset between fast voltage and fast compensation in degrees.
     """
     if zi is None:
         zi = qc.Instrument.find_instrument('ziuhfli')
-    if keysight is None:
-        keysight = qc.Instrument.find_instrument('keysight_gen_left')
 
     if not scope_signal:
         raise ValueError('Select valid scope signal(s).')
@@ -220,7 +216,7 @@ def fast_charge_diagram(keysight_channels: Union[Sequence[KeysightChannel], Keys
     if fast_compensation_channels:
         for fast_compensation_channel in fast_compensation_channels:
             set_keysight(fast_compensation_channel,
-                         multiplier=fast_compensation_scale,
+                         multiplier=comp_scale,
                          phase_offset=fast_compensation_phase_offset)
             fast_compensation_channel._parent.sync_channel_phases()
 
