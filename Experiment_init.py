@@ -35,7 +35,7 @@ import qcodes.instrument_drivers.HP .HP8133A as hpsg
 import qcodes.instrument_drivers.rohde_schwarz.ZNB as vna
 
 from qcodes.utils.configreader import Config
-
+from qcodes.utils.validators import Numbers
 import logging
 import re
 import time
@@ -101,7 +101,7 @@ if __name__ == '__main__':
     STATION = qc.Station(qdac, lockin_topo, lockin_right, lockin_left,
                          keysightgen_left, keysightgen_mid, keithleybot_a,
                          keysightdmm_mid, keysightdmm_bot,
-                         keysightdmm_top, keysightdmm_mid, keysightdmm_bot,
+                         # keysightdmm_top, keysightdmm_mid, keysightdmm_bot,
                          awg1, awg2, zi, mercury, sg1, hpsg1)# keysightgen_pulse)
 
     end = time.time()
