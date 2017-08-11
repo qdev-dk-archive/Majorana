@@ -15,7 +15,7 @@ from qcodes.utils.configreader import Config
 from qcodes.utils.wrappers import show_num
 from modules.Majorana.majorana_wrappers import *
 from modules.Majorana.reload_settings import *
-
+#from modules.Majorana.conductance_measurements import do2Dconductance
 from qcodes.instrument_drivers.QDev.QDac import QDac
 from qcodes.instrument_drivers.stanford_research.SR830 import SR830
 from qcodes.instrument_drivers.stanford_research.SR830 import ChannelBuffer
@@ -203,7 +203,7 @@ if __name__ == '__main__':
     #keysightdmm_top = Keysight_34465A_T10('keysight_dmm_top', 'TCPIP0::192.168.15.111::inst0::INSTR')
     keysightdmm_mid = Keysight_34465A_T10('keysight_dmm_mid', 'TCPIP0::192.168.15.112::inst0::INSTR')
     keysightdmm_bot = Keysight_34465A_T10('keysight_dmm_bot','TCPIP0::192.168.15.113::inst0::INSTR')
-    keithleybot_a = keith.Keithley_2600('keithley_bot','TCPIP0::192.168.15.115::inst0::INSTR',"a")
+    #keithleybot_a = keith.Keithley_2600('keithley_bot','TCPIP0::192.168.15.115::inst0::INSTR',"a")
     awg1 = awg.Tektronix_AWG5014('AWG1','TCPIP0::192.168.15.105::inst0::INSTR',timeout=40)
     awg2 = awg.Tektronix_AWG5014('AWG2','TCPIP0::192.168.15.106::inst0::INSTR',timeout=180)
     sg1 = sg.RohdeSchwarz_SGS100A("sg1","TCPIP0::192.168.15.107::inst0::INSTR")
@@ -223,7 +223,7 @@ if __name__ == '__main__':
           'This may take a while...')
     start = time.time()
     STATION = qc.Station(qdac, lockin_topo, lockin_right, lockin_left,
-                         keysightgen_left, keysightgen_mid, keithleybot_a,
+                         keysightgen_left, keysightgen_mid,# keithleybot_a,
                          keysightdmm_mid, keysightdmm_bot,
                          #keysightdmm_top, keysightdmm_mid, keysightdmm_bot,
                          awg1, awg2, zi, mercury, sg1, hpsg1)# keysightgen_pulse)
@@ -231,7 +231,8 @@ if __name__ == '__main__':
     # Initialisation of the experiment
     end = time.time()
     print("done Querying all instruments took {}".format(end-start))
-    qc.init("./MajoQubit", "DVZ_MCQ002B1", STATION)
+    qc.init("./MajoQubit", "DVZ_MCQ002B1", STATION,
+            display_pdf=False, display_individual_pdf=False)
 
     logger = logging.getLogger()
     logger.setLevel(logging.WARNING)
@@ -245,7 +246,8 @@ if __name__ == '__main__':
         chan = 'ch{:02d}_v'.format(qdac_chans_i[i])
         qdac_chans.append(getattr(qdac, chan))
     
-    qc.Monitor(*qdac_chans, keithleybot_a.volt, zi.oscillator1_freq, zi.oscillator2_freq, 
+    qc.Monitor(*qdac_chans, #keithleybot_a.volt, 
+               zi.oscillator1_freq, zi.oscillator2_freq, 
                zi.scope_channel1_input, zi.scope_channel2_input, mercury.x_fld, mercury.y_fld, mercury.z_fld,
                sg1.status, sg1.power, sg1.frequency, hpsg1.output, hpsg1.amplitude, hpsg1.width,hpsg1.frequency)
 
@@ -253,23 +255,23 @@ if __name__ == '__main__':
     reload_QDAC_settings()
 
 # setup fast diagrams
-    zi.oscillator1_freq(278e6)
-    zi.oscillator2_freq(275e6)
-
-    zi.demod1_timeconstant(5e-7)
-    zi.demod5_timeconstant(5e-7)
-
+#    zi.oscillator1_freq(278e6)
+#    zi.oscillator2_freq(275e6)
+#
+#    zi.demod1_timeconstant(5e-7)
+#    zi.demod5_timeconstant(5e-7)
+#
     zi.demod1_order(5)
     zi.demod5_order(5)
-
+#
     zi.demod1_signalin('Sig In 1')
     zi.demod5_signalin('Sig In 1')
-
+#
     zi.signal_output1_ampdef('dBm')
-    zi.signal_output1_amplitude(-60)
+#    zi.signal_output1_amplitude(-60)
     zi.signal_output1_offset(0)
-
+#
     zi.signal_output2_ampdef('dBm')
-    zi.signal_output2_amplitude(-50)
+#    zi.signal_output2_amplitude(-50)
     zi.signal_output2_offset(0)
  
