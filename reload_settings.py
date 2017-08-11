@@ -19,7 +19,8 @@ def bias_channels():
     # bias_chan2 = configs.get('Channel Parameters', 'left sensor bias channel')
     # bias_chan3 = configs.get('Channel Parameters', 'right sensor bias channel')
 
-    return [int(bias_chan1), int(bias_chan2), int(bias_chan3)]
+    #return [int(bias_chan1), int(bias_chan2), int(bias_chan3)]
+    return [int(bias_chan1)]
 
 
 def used_channels():
@@ -43,7 +44,7 @@ def used_voltage_params():
     qdac = station['qdac']
 
     chans = sorted(used_channels())
-    voltages = [qdac.parameters['ch{:02}_v'.format(ii)] for ii in chans]
+    voltages = [qdac.channels[ii-1] for ii in chans]
 
     return voltages
 
@@ -70,10 +71,8 @@ def print_voltages_all():
     station = qc.Station.default
     qdac = station['qdac']
 
-    parnames = sorted([par for par in qdac.parameters.keys()
-                       if par.endswith('_v')])
-    for parname in parnames:
-        print('{}: {} V'.format(parname, qdac.parameters[parname].get()))
+    for channel in qdac.channels:
+        print('{}: {} V'.format(channel.name, channel.v.get()))
 
     check_unused_qdac_channels()
 
@@ -96,8 +95,8 @@ def qdac_slopes():
     QDAC_SLOPES = dict(zip(used_channels(),
                            len(used_channels())*[qdac_slope]))
 
-    QDAC_SLOPES[int(configs.get('Channel Parameters',
-                                'backgate channel'))] = bias_slope
+#    QDAC_SLOPES[int(configs.get('Channel Parameters',
+#                                'backgate channel'))] = bias_slope
     for ii in bias_channels():
         QDAC_SLOPES[ii] = bias_slope
 
@@ -114,8 +113,8 @@ def check_unused_qdac_channels():
 
     qdac._get_status()
     for ch in [el for el in range(1, 48) if el not in used_channels()]:
-        temp_v = qdac.parameters['ch{:02}_v'.format(ch)].get_latest()
-        if temp_v > 0.0:
+        temp_v = qdac.channels[ch-1].v.get_latest()
+        if temp_v != 0.0:
             log.warning('Unused qDac channel not zero: channel '
                         '{:02}: {}'.format(ch, temp_v))
 
@@ -204,9 +203,9 @@ def reload_QDAC_settings():
             rangemax = float(minmax[1])
 
         vldtr = Numbers(rangemin, rangemax)
-        qdac.parameters['ch{:02}_v'.format(chan)].set_validator(vldtr)
+        qdac.channels[chan-1].v.set_validator(vldtr)
 
     # Update the channels' labels
     labels = channel_labels()
     for chan, label in labels.items():
-        qdac.parameters['ch{:02}_v'.format(chan)].label = label
+        qdac.channels[chan-1].v.label = label
