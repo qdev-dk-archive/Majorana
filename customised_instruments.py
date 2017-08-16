@@ -10,7 +10,7 @@ from qcodes.instrument_drivers.stanford_research.SR830 import SR830
 from qcodes.instrument_drivers.stanford_research.SR830 import ChannelBuffer
 from qcodes.instrument_drivers.Keysight.Keysight_34465A import Keysight_34465A
 from qcodes.instrument_drivers.devices import VoltageDivider
-from qcodes.instrument_drivers.ZI.ZIUHFLI import ZIUHFLI
+
 from qcodes import ArrayParameter
 
 class Scope_avg(ArrayParameter):
