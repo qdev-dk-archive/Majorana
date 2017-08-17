@@ -45,7 +45,6 @@ from functools import partial
 import atexit
 
 from conductance_measurements import do2Dconductance
-from fast_diagrams import fast_charge_diagram
 
 if __name__ == '__main__':
 
@@ -53,8 +52,8 @@ if __name__ == '__main__':
 
     init_log = logging.getLogger(__name__)
 
-    # import T10_setup as t10
-    config = Config('D:\MajoranacQED\Majorana\sample_T3.cfg')
+    config = Config('D:\MajoranacQED\Majorana\sample.config')
+    Config.default = config
 
     def close_station(station):
         for comp in station.components:
@@ -69,10 +68,11 @@ if __name__ == '__main__':
         close_station(qc.Station.default)
 
     # Initialisation of intruments
-    deca = Decadac('decadac', 'ASRL4::INSTR', config, update_currents=False)
-    # deca = Decadac('Decadac', port=4, slot=0)
-    lockin_1 = SR830_T10('lockin_1', 'GPIB10::2::INSTR')
-    lockin_2 = SR830_T10('lockin_2', 'GPIB10::6::INSTR')
+    # deca = Decadac('decadac', 'ASRL4::INSTR', config)
+    deca = Decadac_T3('Decadac', 'ASRL1::INSTR', config, min_val=-10, max_val=10)
+    # deca = Decadac('Decadac', 'ASRL1::INSTR')
+    # lockin_1 = SR830_T10('lockin_1', 'GPIB0::1::INSTR')
+    lockin_2 = SR830_T3('lockin_2', 'GPIB0::2::INSTR', config)
 
     # zi = ZIUHFLI_T10('ziuhfli', 'dev2189')
     # keysightgen_left = Keysight_33500B('keysight_gen_left', 'TCPIP0::192.168.15.101::inst0::INSTR')
@@ -90,7 +90,8 @@ if __name__ == '__main__':
                          port=7020,
                          axes=['X', 'Y', 'Z'])
 
-    v1 = vna.ZNB20('VNA', 'TCPIP0::192.168.15.103::inst0::INSTR')
+#    v1 = vna.ZNB('VNA', 'TCPIP0::192.168.15.103::inst0::INSTR', init_s_params=False)
+#    v1.add_channel('S21')
    # keithleytop=keith.Keithley_2600('keithley_top',
    # 'TCPIP0::192.168.15.116::inst0::INSTR',"a,b")
    
@@ -98,7 +99,7 @@ if __name__ == '__main__':
           'This may take a while...')
 
     start = time.time()
-    STATION = qc.Station( lockin_1, lockin_2, mercury, v1, deca)
+    STATION = qc.Station( lockin_2, mercury, deca) #, v1 lockin_1, deca)
                          # keysightgen_left, keysightgen_mid, keithleybot_a,
                          # keysightdmm_mid, keysightdmm_bot,
                          # keysightdmm_top, keysightdmm_mid, keysightdmm_bot,
@@ -116,35 +117,28 @@ if __name__ == '__main__':
     logger = logging.getLogger()
     logger.setLevel(logging.WARNING)
 
-    config = Config('D:\MajoranacQED\Majorana\sample_T3.cfg')
-    Config.default = config
+    #make sure the right values will be displayed in monitor when firing it up
+    lockin_2.acbias()
+    deca.dcbias.get()
+    deca.lcut.get()
+    deca.rcut.get()
+    deca.jj.get()
+    deca.rplg.get()
+    deca.lplg.get()
+                
+    qc.Monitor(mercury.x_fld, mercury.y_fld, mercury.z_fld,
+                deca.dcbias, deca.lcut, deca.rcut, deca.jj, deca.rplg,
+                deca.lplg,
+                lockin_2.acbias)#, v1.channels.S21.power
+                #)
 
-    # qdac_chans_i = [39,18,12,10,9,7,47,22,48,43,42,37,36,35]
-    # qdac_chans = []
-    # for i in qdac_chans_i:
-        # qdac_chans.append(qdac.channels[i-1].v)
-    
-    qc.Monitor(mercury.x_fld, mercury.y_fld, mercury.z_fld
-                #*qdac_chans, #keithleybot_a.volt,
-                )
-
-     # Get the two global objects containing the instruments and settings
-
-
-    # configs.reload()
-
-    # one could put in some validation here if wanted
-
-
-    lockin_1.acfactor = float(configs.get('Gain settings',
-                                             'ac factor'))
-    lockin_2.acfactor = float(configs.get('Gain settings',
+    # lockin_1.acfactor = float(config.get('Gain settings','ac factor'))
+    lockin_2.acfactor = float(config.get('Gain settings',
                                               'ac factor'))
 
 
-    lockin_1.ivgain = float(configs.get('Gain settings',
-                                           'iv gain'))
-    lockin_2.ivgain = float(configs.get('Gain settings',
+    # lockin_1.ivgain = float(config.get('Gain settings', 'iv gain'))
+    lockin_2.ivgain = float(config.get('Gain settings',
                                             'iv gain'))
 
 

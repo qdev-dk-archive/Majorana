@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Customised instruments with extra features such as voltage dividers and derived
-parameters for use with T10
+parameters for use with T3
 """
 import numpy as np
 
@@ -10,6 +10,7 @@ from qcodes.instrument_drivers.stanford_research.SR830 import SR830
 from qcodes.instrument_drivers.stanford_research.SR830 import ChannelBuffer
 from qcodes.instrument_drivers.Keysight.Keysight_34465A import Keysight_34465A
 from qcodes.instrument_drivers.devices import VoltageDivider
+from qcodes.instrument_drivers.Harvard.Decadac import Decadac
 
 from qcodes import ArrayParameter
 
@@ -84,7 +85,7 @@ class ConductanceBuffer(ChannelBuffer):
 
 # Subclass the SR830
 
-class SR830_T10(SR830):
+class SR830_T3(SR830):
     """
     An SR830 with the following super powers:
         - a Voltage divider
@@ -92,17 +93,21 @@ class SR830_T10(SR830):
         - A conductance buffer
     """
 
-    def __init__(self, name, address, **kwargs):
+    def __init__(self, name, address, config, **kwargs):
         super().__init__(name, address, **kwargs)
 
         # using the vocabulary of the config file
-        self.ivgain = 1
-        self.__acf = 1
+        self.ivgain = int(config.get('Gain settings',
+                                      'iv gain'))
+        # self.__acf = 1
 
         self.add_parameter('amplitude_true',
+                           label='ac bias',
                            parameter_class=VoltageDivider,
                            v1=self.amplitude,
                            division_value=self.acfactor)
+        
+        self.acbias = self.amplitude_true
 
         self.add_parameter('g',
                            label='{} conductance'.format(self.name),
@@ -135,6 +140,12 @@ class SR830_T10(SR830):
         self.__acf = acfactor
         self.amplitude_true.division_value = acfactor
 
+    def snapshot_base(self, update=False, params_to_skip_update=None):
+        if params_to_skip_update is None:
+            params_to_skip_update = ('conductance', 'ch1_databuffer', 'ch2_databuffer')
+        snap = super().snapshot_base(update=update,
+                                     params_to_skip_update=params_to_skip_update)
+        return snap
 
 # Subclass the QDAC
 
@@ -160,23 +171,57 @@ class QDAC_T10(QDac):
                            unit='nA',
                            get_parser=float)
 
-        # sens_r_channel = int(config.get('Channel Parameters',
-        #                                'right sensor bias channel'))
-        # sens_r_channel = self.channels[sens_r_channel-1].v
-
-        # sens_l_channel = int(config.get('Channel Parameters',
-        #                                 'left sensor bias channel'))
-        # sens_l_channel = self.channels[sens_l_channel-1].v
-
         self.topo_bias = VoltageDivider(topo_channel,
                                         float(config.get('Gain settings',
                                                          'dc factor topo')))
-        # self.sens_r_bias = VoltageDivider(sens_r_channel,
-        #                                  float(config.get('Gain settings',
-        #                                                   'dc factor right')))
-        # self.sens_l_bias = VoltageDivider(sens_l_channel,
-        #                                  float(config.get('Gain settings',
-        #                                                    'dc factor left')))
+        
+        
+class Decadac_T3(Decadac):
+    """
+    A Decadac with one voltage dividers
+    """
+    def __init__(self, name, address, config, **kwargs):
+        super().__init__(name, address, **kwargs)
+
+        # Define the named channels
+        
+        # Give them names:
+        labels = config.get('Decadac Channel Labels')
+        for chan, label in labels.items():
+            self.channels[int(chan)].volt.label = label
+
+        dcbias_i = int(config.get('Channel Parameters',
+                                      'source channel'))
+        dcbias = self.channels[dcbias_i].volt
+
+
+        self.dcbias = VoltageDivider(dcbias,
+                                        float(config.get('Gain settings',
+                                                         'dc factor')))
+        
+        self.dcbias.label = config.get('Decadac Channel Labels', dcbias_i)
+        
+        lcut = int(config.get('Channel Parameters',
+                                      'left cutter'))
+        self.lcut = self.channels[lcut].volt
+        
+        rcut = int(config.get('Channel Parameters',
+                                      'right cutter'))
+        self.rcut = self.channels[rcut].volt
+        
+        jj = int(config.get('Channel Parameters',
+                                      'central cutter'))
+        self.jj = self.channels[jj].volt
+        
+        rplg = int(config.get('Channel Parameters',
+                                      'right plunger'))
+        self.rplg = self.channels[rplg].volt
+        
+        lplg = int(config.get('Channel Parameters',
+                                      'left plunger'))
+        self.lplg = self.channels[lplg].volt
+
+    
 
 
 # Subclass the DMM
@@ -203,16 +248,3 @@ class Keysight_34465A_T10(Keysight_34465A):
         """
         return self.volt()/self.iv_conv*1E12
 
-class ZIUHFLI_T10(ZIUHFLI):
-
-    def __init__(self, name, address, **kwargs):
-        super().__init__(name, address, **kwargs)
-
-        self.add_parameter('scope_avg_ch1',
-                           channel=1,
-                           label='',
-                           parameter_class=Scope_avg)
-        self.add_parameter('scope_avg_ch2',
-                           channel=2,
-                           label='',
-                           parameter_class=Scope_avg)

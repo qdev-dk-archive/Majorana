@@ -9,7 +9,7 @@ from qcodes.instrument.parameter import Parameter
 from qcodes.utils.wrappers import _do_measurement
 from qcodes.instrument_drivers.QDev.QDac_channels import QDac as QDacch
 
-from customised_instruments import SR830_T10
+from customised_instruments import SR830_T3
 
 def do2Dconductance(outer_param: Parameter,
                     outer_start: Union[float, int],
@@ -19,7 +19,7 @@ def do2Dconductance(outer_param: Parameter,
                     inner_start: Union[float, int],
                     inner_stop: Union[float, int],
                     inner_npts: int,
-                    lockin: SR830_T10,
+                    lockin: SR830_T3,
                     delay: Optional[float]=None):
     """
     Function to perform a sped-up 2D conductance measurement
