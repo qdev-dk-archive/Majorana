@@ -97,9 +97,9 @@ class SR830_T3(SR830):
         super().__init__(name, address, **kwargs)
 
         # using the vocabulary of the config file
-        self.ivgain = int(config.get('Gain settings',
+        self.ivgain = float(config.get('Gain settings',
                                       'iv gain'))
-        # self.__acf = 1
+        self.__acf = 1
 
         self.add_parameter('amplitude_true',
                            label='ac bias',
@@ -119,18 +119,34 @@ class SR830_T3(SR830):
         self.add_parameter('conductance',
                            label='{} conductance'.format(self.name),
                            parameter_class=ConductanceBuffer)
+        
+        self.add_parameter('resistance',
+                           label='{} Resistance'.format(self.name),
+                           get_cmd=self._get_resistance,
+                           unit='Ohm',
+                           get_parser=float)
 
     def _get_conductance(self):
         """
         get_cmd for conductance parameter
         """
-        resistance_quantum = 25.818e3  # (Ohm)
+        resistance_quantum = 25.8125e3  # (Ohm)
         i = self.X() / self.ivgain
         # ac excitation voltage at the sample
         v_sample = self.amplitude_true()
 
         return (i/v_sample)*resistance_quantum
 
+    def _get_resistance(self):
+        """
+        get_cmd for resistance parameter
+        """
+        i = self.X() / self.ivgain
+        # ac excitation voltage at the sample
+        v_sample = self.amplitude_true()
+
+        return (v_sample/i)
+    
     @property
     def acfactor(self):
         return self.__acf
@@ -185,43 +201,47 @@ class Decadac_T3(Decadac):
 
         # Define the named channels
         
-        # Give them names:
+        self.config = config
+        
+        # Assign labels:
         labels = config.get('Decadac Channel Labels')
         for chan, label in labels.items():
             self.channels[int(chan)].volt.label = label
 
+        # Take voltage divider of source/drain into account:
         dcbias_i = int(config.get('Channel Parameters',
                                       'source channel'))
         dcbias = self.channels[dcbias_i].volt
-
-
         self.dcbias = VoltageDivider(dcbias,
                                         float(config.get('Gain settings',
                                                          'dc factor')))
-        
         self.dcbias.label = config.get('Decadac Channel Labels', dcbias_i)
         
-        lcut = int(config.get('Channel Parameters',
-                                      'left cutter'))
+        # Assign custom variable names
+        lcut = int(config.get('Channel Parameters', 'left cutter'))
         self.lcut = self.channels[lcut].volt
         
-        rcut = int(config.get('Channel Parameters',
-                                      'right cutter'))
+        rcut = int(config.get('Channel Parameters', 'right cutter'))
         self.rcut = self.channels[rcut].volt
         
-        jj = int(config.get('Channel Parameters',
-                                      'central cutter'))
+        jj = int(config.get('Channel Parameters', 'central cutter'))
         self.jj = self.channels[jj].volt
         
-        rplg = int(config.get('Channel Parameters',
-                                      'right plunger'))
+        rplg = int(config.get('Channel Parameters', 'right plunger'))
         self.rplg = self.channels[rplg].volt
         
-        lplg = int(config.get('Channel Parameters',
-                                      'left plunger'))
+        lplg = int(config.get('Channel Parameters', 'left plunger'))
         self.lplg = self.channels[lplg].volt
 
-    
+    def set_all(self, voltage_value, set_dcbias=False):
+        channels_in_use = self.config.get('Decadac Channel Labels').keys()
+        channels_in_use = [int(ch) for ch in channels_in_use]
+            
+        for ch in channels_in_use:
+            self.channels[ch].volt.set(voltage_value)
+            
+        if set_dcbias:
+            self.dcbias.set(voltage_value)
 
 
 # Subclass the DMM
