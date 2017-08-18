@@ -232,6 +232,15 @@ class Decadac_T3(Decadac):
         
         lplg = int(config.get('Channel Parameters', 'left plunger'))
         self.lplg = self.channels[lplg].volt
+        
+        self.add_parameter('cutters',
+                           label='{} cutters'.format(self.name),
+                           # use lambda for late binding
+                           get_cmd=self.get_cutters,
+                           set_cmd=self.set_cutters,
+                           unit='V',
+                           get_parser=float)
+
 
     def set_all(self, voltage_value, set_dcbias=False):
         channels_in_use = self.config.get('Decadac Channel Labels').keys()
@@ -243,7 +252,23 @@ class Decadac_T3(Decadac):
         if set_dcbias:
             self.dcbias.set(voltage_value)
 
-
+    def set_cutters(self, voltage_value):
+        dic = self.config.get('Channel Parameters')
+            
+        self.channels[int(dic['left cutter'])].volt.set(voltage_value)
+        self.channels[int(dic['right cutter'])].volt.set(voltage_value)
+        
+    def get_cutters(self):
+        dic = self.config.get('Channel Parameters')
+            
+        vleft = self.channels[int(dic['left cutter'])].volt.get()
+        vright = self.channels[int(dic['right cutter'])].volt.get()
+        if (abs(vleft-vright)>0.05):
+            print('Error! Left and right cutter are not the same!')
+        else:
+            return vleft
+        
+        
 # Subclass the DMM
 
 
