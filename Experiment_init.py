@@ -111,7 +111,7 @@ if __name__ == '__main__':
 
     end = time.time()
     print("done Querying all instruments took {}".format(end-start))
-    qc.init("./data", "AcQED05_7", STATION,
+    qc.init("./data", "AcQED05_85_dev2", STATION,
             display_pdf=False, display_individual_pdf=False)
 
     logger = logging.getLogger()
