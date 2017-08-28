@@ -45,14 +45,14 @@ def do2Dconductance(outer_param: Parameter,
     if sr.name not in station.components:
         raise KeyError('Unknown lock-in! Refusing to proceed until the '
                        'lock-in has been added to the station.')
-    if (outer_param._instrument.name not in station.components and
-        outer_param._instrument._parent.name not in station.components):
-        raise KeyError('Unknown instrument for outer parameter. '
-                       'Please add that instrument to the station.')
-    if (inner_param._instrument.name not in station.components and
-        inner_param._instrument._parent.name not in station.components):
-        raise KeyError('Unknown instrument for inner parameter. '
-                       'Please add that instrument to the station.')
+#    if (outer_param._instrument.name not in station.components and
+#        outer_param._instrument._parent.name not in station.components):
+#        raise KeyError('Unknown instrument for outer parameter. '
+#                       'Please add that instrument to the station.')
+#    if (inner_param._instrument.name not in station.components and
+#        inner_param._instrument._parent.name not in station.components):
+#        raise KeyError('Unknown instrument for inner parameter. '
+#                       'Please add that instrument to the station.')
 
     tau = sr.time_constant()
     min_delay = 0.002  # what's the physics behind this number?

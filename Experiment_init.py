@@ -112,16 +112,15 @@ if __name__ == '__main__':
 
     end = time.time()
     print("done Querying all instruments took {}".format(end-start))
-    qc.init("./MajoQubit", "DVZ_MCQ002B1", STATION,
+    qc.init("./MajoQubit", "DiamondB", STATION,
             display_pdf=False, display_individual_pdf=False)
-
     logger = logging.getLogger()
     logger.setLevel(logging.WARNING)
 
     config = Config('A:\qcodes_experiments\modules\Majorana\sample.config')
     Config.default = config
 
-    qdac_chans_i = [39,18,12,10,9,7,47,22,48,43,42,37,36,35]
+    qdac_chans_i = [18,17,8,9,6,5,1,31,46,48,45,42,13]
     qdac_chans = []
     for i in qdac_chans_i:
         qdac_chans.append(qdac.channels[i-1].v)
