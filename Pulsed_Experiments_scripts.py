@@ -1,10 +1,16 @@
+from typing import Callable, List, Optional, Dict, Tuple, Union, TYPE_CHECKING
+
 import numpy as np
-from datetime import datetime
 from inspect import signature
 
 import broadbean as bb
+
+if TYPE_CHECKING:
+    from qcodes.instrument_drivers.tektronix.AWG5014 import Tektronix_AWG5014
+    from qcodes.instrument_drivers.ZI.ZIUHFLI import ZIUHFLI
+    from qcodes.instrument_drivers.keysight.Keysight_33500B import Keysight_33500B
 from qcodes.instrument.parameter import ArrayParameter, StandardParameter
-from qcodes.utils.helpers import full_class
+
 from qcodes.utils.wrappers import do1d
 
 ramp = bb.PulseAtoms.ramp
@@ -18,7 +24,7 @@ class ArgumentError(Exception):
 # For the main function, we
 # make a decorator to detect if all
 # keywordarguments have been supplied
-def check_kwargs(func):
+def check_kwargs(func: Callable) -> Callable:
     """
     Decorator function that ensures that all kwargs of a function taking
     only kwargs have been specified.
@@ -49,9 +55,14 @@ class AverageRampResponse(ArrayParameter):
     i.e. the data axis (out-of-plane, z axis) of the experiment
     """
 
-    def __init__(self, name, awg, zi, no_of_avgs, voltages,
-                 awg_channel=1,
-                 label=None, unit=None):
+    def __init__(self, name: str,
+                 awg: 'Tektronix_AWG5014',
+                 zi: 'ZIUHFLI',
+                 no_of_avgs: int,
+                 voltages: Union[List[float], np.array],
+                 awg_channel: int=1,
+                 label: Optional[str]=None,
+                 unit: Optional[str]=None) -> None:
         """
         Instantiate the parameter. The setpoints must be known at
         the time of instantiation and can not be changed.
@@ -87,7 +98,7 @@ class AverageRampResponse(ArrayParameter):
         # instrument, so we fake one
         # self._instrument = FakeInstrument('Ramp machine')
 
-    def get(self):
+    def get(self) -> np.array:
         """
         The get call. Performs the measurement no_of_avgs times
         """
@@ -122,8 +133,13 @@ class PulseTime(StandardParameter):
     Builds a new sequence and uploads it to the AWG.
     """
 
-    def __init__(self, name, basesequence, pos, chan, segname, awg,
-                 awgchannels):
+    def __init__(self, name: str,
+                 basesequence: bb.Sequence,
+                 pos: int,
+                 chan: int,
+                 segname: str,
+                 awg: 'Tektronix_AWG5014',
+                 awgchannels: List) -> None:
         """
         Args:
             name (str): The name of the parameter.
@@ -148,7 +164,7 @@ class PulseTime(StandardParameter):
 
         # self._instrument = FakeInstrument('Tektronix AWG')
 
-    def set(self, width):
+    def set(self, width: float):
         # change the width of the high time
         self.seq.element(self.pos).changeDuration(self.chan,
                                                   self.segname, width)
@@ -157,10 +173,11 @@ class PulseTime(StandardParameter):
         self.awg.make_send_and_load_awg_file(*package[:],
                                              channels=self.awgchannels)
 
-    def get(self):
+    def get(self) -> int:
+        # TODO: What is the point of this?
         return 1
 
-    def snapshot_base(self, update=False):
+    def snapshot_base(self, update: bool=False) -> Dict:
         """
         State of the pulse time parameter as a JSON-compatible dict.
         Records the entire pulse sequence in the metadata.
@@ -186,8 +203,11 @@ class PulseTime(StandardParameter):
         return state
 
 
-def _DPE_prepareKeysight(no_of_pulses=None, cycletime=None, ramp_low=None,
-                         ramp_high=None, keysight=None):
+def _DPE_prepareKeysight(no_of_pulses: int=None,
+                         cycletime: float=None,
+                         ramp_low: float=None,
+                         ramp_high: float=None,
+                         keysight: 'Keysight_33500B'=None):
     """
     Prepare the Keysight
     """
@@ -212,7 +232,8 @@ def _DPE_prepareKeysight(no_of_pulses=None, cycletime=None, ramp_low=None,
     keysight.ch1_burst_state('ON')
 
 
-def _DPE_prepareTektronixAWG(awg, awg_channel, SR, pulsehigh):
+def _DPE_prepareTektronixAWG(awg: 'Tektronix_AWG5014', awg_channel: int,
+                             SR: Union[int, float], pulsehigh: float) -> None:
     """
     Prepare the AWG.
 
@@ -233,8 +254,9 @@ def _DPE_prepareTektronixAWG(awg, awg_channel, SR, pulsehigh):
     awg.parameters['ch{}_add_input'.format(awg_channel)].set('"ESIG"')
 
 
-def _DPE_prepareZIUHFLI(zi, demod_freq, pts_per_shot,
-                        SRstring, no_of_pulses, meastime):
+def _DPE_prepareZIUHFLI(zi: 'ZIUHFLI', demod_freq: float, pts_per_shot: int,
+                        SRstring: str, no_of_pulses: int,
+                        meastime: float) -> None:
     """
     Prepare the ZI UHF-LI
 
@@ -278,7 +300,7 @@ def _DPE_prepareZIUHFLI(zi, demod_freq, pts_per_shot,
     zi.scope_segments_count(no_of_pulses)
 
 
-def _DPE_correct_meastime(meastime, npts):
+def _DPE_correct_meastime(meastime: float, npts: int) -> Tuple[float, str]:
     """
     Given a number of points to measure, and a desired measurement time,
     find the measurement time closest to the given one that the ZI UHF-LI can
@@ -317,8 +339,11 @@ def _DPE_correct_meastime(meastime, npts):
     return newtime, SRstring
 
 
-def _DPE_makeSequence(hightime, trig_delay, meastime, prewaittime, cycletime,
-                      no_of_pulses, pulsehigh, SR, segname):
+def _DPE_makeSequence(hightime: float, trig_delay: float, meastime: float,
+                      prewaittime: float, cycletime: float,
+                      no_of_pulses: int, pulsehigh: float,
+                      SR: Union[float, int],
+                      segname: str) -> bb.Sequence:
     """
     Generate the pulse sequence for the experiment.
 
@@ -395,17 +420,18 @@ def _DPE_makeSequence(hightime, trig_delay, meastime, prewaittime, cycletime,
 
 
 @check_kwargs
-def doPulsedExperiment(fast_axis=None, slow_axis=None,
+def doPulsedExperiment(fast_axis: str=None,
+                       slow_axis: str=None,
                        slow_start=None, slow_stop=None, slow_npts=None,
                        fast_start=None, fast_stop=None, fast_npts=None,
                        # Acquisition variables
-                       n_avgs=None,
-                       pts_per_shot=None,
+                       n_avgs: int=None,
+                       pts_per_shot: int=None,
                        # Pulse variables
-                       hightime=None,
-                       meastime=None,
-                       cycletime=None,
-                       transfertime=None,
+                       hightime: float=None,
+                       meastime: float=None,
+                       cycletime: float=None,
+                       transfertime: float=None,
                        pulsehigh=None,
                        trig_delay=None,
                        # Demodulation variables
@@ -467,7 +493,7 @@ def doPulsedExperiment(fast_axis=None, slow_axis=None,
                                       no_of_pulses=fast_npts,
                                       pulsehigh=pulsehigh,
                                       SR=SR, segname='high')
-
+    pulseTime = 0.
     # Make the two measurement parameters
     if slow_axis == 'dt':
         pulseTime = PulseTime(name='pulse_time', basesequence=base_sequence,
@@ -490,13 +516,13 @@ def doPulsedExperiment(fast_axis=None, slow_axis=None,
     do1d(pulseTime, slow_start, slow_stop, slow_npts, 0, ramp_avg)
 
 
-def showPulsedExperiment(fast_npts=None,
-                         hightime=None,
-                         meastime=None,
-                         cycletime=None,
-                         transfertime=None,
-                         pulsehigh=None,
-                         trig_delay=None):
+def showPulsedExperiment(fast_npts: int=None,
+                         hightime: float=None,
+                         meastime: float=None,
+                         cycletime: float=None,
+                         transfertime: float=None,
+                         pulsehigh: float=None,
+                         trig_delay: float=None):
     """
     Function to visualise the pulsed experiment
     """
