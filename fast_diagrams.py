@@ -34,7 +34,7 @@ def fast_charge_diagram(keysight_channel, fast_v_start, fast_v_stop, n_averages,
                         scope_signal, zi_trig_signal='Trig Input 1',
                         trigger_holdoff=60e-6, zi_samplingrate='14.0 MHz', zi_scope_length=4096,
                         zi_trig_hyst=0, zi_trig_level=.5, zi_trig_delay = 0, print_settings=False,
-                        zi=None, keysight=None, tasks_to_perform=None):
+                        keysight_voltage_multiplier=1, zi=None, keysight=None, tasks_to_perform=None):
     """
     Args:
         keysight_channel:
@@ -55,6 +55,11 @@ def fast_charge_diagram(keysight_channel, fast_v_start, fast_v_stop, n_averages,
         zi_trig_level:
         zi_trig_delay: Should be the rise time of your signal/trigger signal 
                        For Keysight sawtooth it is 6e-7s.
+        keysight_voltage_multiplier: The actual voltage to the keysight is fast_v_start
+        and fast_v_stop multiplied by this number. I.e. if you have a voltage divider 
+        between the keysight and your device that divides the voltage by 5. You should
+        set the fast_voltage_start and fast_voltage_stop to the values you want on the
+        device and the values sent to the keysight will be 5*fast_voltage_start and 5*fast_voltage_stop
     """
 
     if zi is None:
@@ -92,9 +97,10 @@ def fast_charge_diagram(keysight_channel, fast_v_start, fast_v_stop, n_averages,
     # # obsolete next line
     # additional_sawtooth_amplitude = keysight_amplitude * ((trigger_holdoff)/scope_duration)
 
-
-    keysight_amplitude = abs(fast_v_stop-fast_v_start)
-    key_offset = fast_v_start + keysight_amplitude/2
+    fast_v_start_scaled = keysight_voltage_multiplier * fast_v_start
+    fast_v_stop_scaled = keysight_voltage_multiplier * fast_v_stop
+    keysight_amplitude = abs(fast_v_stop_scaled-fast_v_start_scaled)
+    key_offset = fast_v_start_scaled + keysight_amplitude/2
     # fast_v_start -= additional_sawtooth_amplitude
 
     zi.scope_channels(3)
