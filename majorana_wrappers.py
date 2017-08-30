@@ -13,7 +13,9 @@ import logging
 import os
 import time
 
-from qcodes.utils.wrappers import _plot_setup, _save_individual_plots, do1d, do2d
+from qcodes.utils.natalie_wrappers.plot_functions import _plot_setup, _save_individual_plots
+from qcodes.utils.natalie_wrappers.sweep_functions import  do1d, do2d
+from qcodes.utils.natalie_wrappers.show_num import show_num
 from reload_settings import used_channels
 
 ##################################################
@@ -130,7 +132,7 @@ def do1d_M(inst_set, start, stop, n_points, delay, *inst_meas, ramp_slope=None):
         division:  Spacing between values
         delay:  Delay at every step
         *inst_meas:  any number of instrument to measure
-        ramp_slope: 
+        ramp_slope:
 
     Returns:
         plot, data : returns the plot and the dataset

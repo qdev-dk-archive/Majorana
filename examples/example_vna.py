@@ -4,25 +4,26 @@
 
 
 ## Set power on all channels
-v1.channels.power(-50)
+v1.channels.power(-5)
 
+#%%
 ## Set power of specific channel:
-v1.channels.S21.power(-30)
+v1.channels.S21.power(-5)
 
-## Turn rf on
+#%% Turn rf on
 v1.rf_on()
 
-## Do a measurement 
+#%% Do a measurement 
 ### Define parameters for traces:
 
-v1.channels.S21.start(100e3)
-v1.channels.S21.stop(6e6)
+v1.channels.S21.start(5.0e9)
+v1.channels.S21.stop(5.4e9)
 
-npts = 200
+npts = 501
 v1.channels.S21.npts(npts)
 
 ## sweep left cutter and take traces
-do1d(deca.lcut, 0, -10, 100, 0.1, v1.channels.S21.trace)
+do1d(deca.lcut, 0, -10, 10, 0.1, v1.channels.S21.trace)
 
 ### define a frequency span
 #v1.channels.S11.span(200e3)

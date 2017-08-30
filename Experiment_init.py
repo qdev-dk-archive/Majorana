@@ -13,7 +13,7 @@ mpl.rcParams['figure.subplot.bottom'] = 0.15
 mpl.rcParams['font.size'] = 8
 
 from qcodes.utils.configreader import Config
-from qcodes.utils.wrappers import show_num
+from qcodes.utils.natalie_wrappers.file_setup import your_init
 
 from majorana_wrappers import *
 from reload_settings import *
@@ -68,38 +68,34 @@ if __name__ == '__main__':
         close_station(qc.Station.default)
 
     # Initialisation of intruments
-    # deca = Decadac('decadac', 'ASRL4::INSTR', config)
     deca = Decadac_T3('Decadac', 'ASRL1::INSTR', config, min_val=-10, max_val=10)
-    # deca = Decadac('Decadac', 'ASRL1::INSTR')
+
     # lockin_1 = SR830_T10('lockin_1', 'GPIB0::1::INSTR')
     lockin_2 = SR830_T3('lockin_2', 'GPIB0::2::INSTR', config)
 
     # zi = ZIUHFLI_T10('ziuhfli', 'dev2189')
     # keysightgen_left = Keysight_33500B('keysight_gen_left', 'TCPIP0::192.168.15.101::inst0::INSTR')
     # keysightgen_left.add_function('sync_phase',call_cmd='SOURce1:PHASe:SYNChronize')
-    # keysightgen_mid = Keysight_33500B('keysight_gen_mid', 'TCPIP0::192.168.15.114::inst0::INSTR')
-    #keysightdmm_top = Keysight_34465A_T10('keysight_dmm_top', 'TCPIP0::192.168.15.111::inst0::INSTR')
+
     #keithleybot_a = keith.Keithley_2600('keithley_bot','TCPIP0::192.168.15.115::inst0::INSTR',"a")
     # awg1 = awg.Tektronix_AWG5014('AWG1','TCPIP0::192.168.15.105::inst0::INSTR',timeout=40)
     # sg1 = sg.RohdeSchwarz_SGS100A("sg1","TCPIP0::192.168.15.107::inst0::INSTR")
     # sg1.frequency.set_validator(Numbers(1e5,43.5e9))  # SMF100A can go to 43.5 GHz.
-    # hpsg1 = hpsg.HP8133A("hpsg1", 'GPIB10::4::INSTR')  
-  #  keysightgen_pulse = Keysight_33500B('keysight_gen_pulse', 'TCPIP0::192.168.15.109::inst0::INSTR')
+
     mercury = MercuryiPS(name='mercury',
                          address='172.20.10.148',
                          port=7020,
                          axes=['X', 'Y', 'Z'])
 
-#    v1 = vna.ZNB('VNA', 'TCPIP0::192.168.15.103::inst0::INSTR', init_s_params=False)
-#    v1.add_channel('S21')
-   # keithleytop=keith.Keithley_2600('keithley_top',
-   # 'TCPIP0::192.168.15.116::inst0::INSTR',"a,b")
+    v1 = vna.ZNB('VNA', 'TCPIP0::192.168.15.103::inst0::INSTR', init_s_params=False)
+    v1.add_channel('S21')
    
     print('Querying all instrument parameters for metadata.'
           'This may take a while...')
 
     start = time.time()
-    STATION = qc.Station( lockin_2, mercury, deca) #, v1 lockin_1, deca)
+    STATION = qc.Station( lockin_2, mercury, deca, v1)
+                        # lockin_1, deca)
                          # keysightgen_left, keysightgen_mid, keithleybot_a,
                          # keysightdmm_mid, keysightdmm_bot,
                          # keysightdmm_top, keysightdmm_mid, keysightdmm_bot,
@@ -111,7 +107,7 @@ if __name__ == '__main__':
 
     end = time.time()
     print("done Querying all instruments took {}".format(end-start))
-    qc.init("./data", "AcQED05_85_dev2", STATION,
+    your_init("./data", "natalie_playing", STATION,
             display_pdf=False, display_individual_pdf=False)
 
     logger = logging.getLogger()
