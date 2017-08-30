@@ -23,7 +23,7 @@ npts = 501
 v1.channels.S21.npts(npts)
 
 ## sweep left cutter and take traces
-do1d(deca.lcut, 0, -10, 10, 0.1, v1.channels.S21.trace)
+do1d(deca.lcut, 0, -0.001, 10, 0.1, v1.channels.S21.trace)
 
 ### define a frequency span
 #v1.channels.S11.span(200e3)
