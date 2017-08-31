@@ -98,9 +98,10 @@ class SR830_T3(SR830):
         super().__init__(name, address, **kwargs)
 
         # using the vocabulary of the config file
-        self.ivgain = float(config.get('Gain settings',
+        self.ivgain = float(config.get('Gain Settings',
                                       'iv gain'))
-        self.__acf = 1
+        self.__acf = float(config.get('Gain Settings',
+                                         'ac factor'))
 
         self.add_parameter('amplitude_true',
                            label='ac bias',
@@ -245,44 +246,37 @@ class Decadac_T3(Decadac):
                            unit='V',
                            get_parser=float)
 
-        # Set up voltage safety limits in software
+        # Set up voltage and ramp safetly limits in software
+        ranges = config.get('Decadac Channel Limits')
+        ramp_settings = config.get('Decadac Channel Ramp Setttings')
 
-        # limits on voltage allowed
-        lcut_limits = config.get('Decadac Channel Limits', lcut).split(' ')
-        self.lcut.set_validator(vals.Numbers(float(lcut_limits[0]), float(lcut_limits[1])))
+        for chan in range(20):
+            try:
+                chan_range = ranges[str(chan)]
+            except KeyError:
+                continue
+            range_minmax = chan_range.split(" ")
+            if len(range_minmax) != 2:
+                raise ValueError("Expected: min max. Got {}".format(chan_range))
+            else:
+                rangemin = float(range_minmax[0])
+                rangemax = float(range_minmax[1])
+            vldtr = vals.Numbers(rangemin, rangemax)
+            self.channels[chan].volt.set_validator(vldtr)
 
-        rcut_limits = config.get('Decadac Channel Limits', rcut).split(' ')
-        self.rcut.set_validator(vals.Numbers(float(rcut_limits[0]), float(rcut_limits[1])))
- 
-        jj_limits = config.get('Decadac Channel Limits', jj).split(' ')
-        self.jj.set_validator(vals.Numbers(float(jj_limits[0]), float(jj_limits[1])))
+            try:
+                chan_ramp_settings = ramp_settings[str(chan)]
+            except KeyError:
+                continue
+            ramp_stepdelay = chan_ramp_settings.split(" ")
+            if len(ramp_stepdelay) != 2:
+                raise ValueError("Expected: step delay. Got {}".format(chan_ramp_settings))
+            else:
+                step = float(ramp_stepdelay[0])
+                delay = float(ramp_stepdelay[1])
+            self.channels[chan].volt.set_step(step)
+            self.channels[chan].volt.set_delay(delay)
 
-        rplg_limits = config.get('Decadac Channel Limits', rplg).split(' ')
-        self.rplg.set_validator(vals.Numbers(float(rplg_limits[0]), float(rplg_limits[1])))
-
-        lplg_limits = config.get('Decadac Channel Limits', lplg).split(' ')
-        self.lplg.set_validator(vals.Numbers(float(lplg_limits[0]), float(lplg_limits[1])))
-
-        # limits on ramp speeds
-        lcut_ramp_settings = config.get('Decadac Channel Ramp Setttings', lcut).split(' ')
-        self.lcut.set_step(float(lcut_ramp_settings[0]))
-        self.lcut.set_delay(float(lcut_ramp_settings[1]))
-
-        rcut_ramp_settings = config.get('Decadac Channel Ramp Setttings', rcut).split(' ')
-        self.rcut.set_step(float(rcut_ramp_settings[0]))
-        self.rcut.set_delay(float(rcut_ramp_settings[1]))
- 
-        jj_ramp_settings = config.get('Decadac Channel Ramp Setttings', jj).split(' ')
-        self.jj.set_step(float(jj_ramp_settings[0]))
-        self.jj.set_delay(float(jj_ramp_settings[1]))
-
-        rplg_ramp_settings = config.get('Decadac Channel Ramp Setttings', rplg).split(' ')
-        self.rplg.set_step(float(rplg_ramp_settings[0]))
-        self.rplg.set_delay(float(rplg_ramp_settings[1]))
-
-        lplg_ramp_settings = config.get('Decadac Channel Ramp Setttings', lplg).split(' ')
-        self.lplg.set_step(float(lplg_ramp_settings[0]))
-        self.lplg.set_delay(float(lplg_ramp_settings[1]))
 
 
     def set_all(self, voltage_value, set_dcbias=False):
