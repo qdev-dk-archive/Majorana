@@ -131,7 +131,7 @@ class SR830_T3(SR830):
         get_cmd for conductance parameter
         """
         resistance_quantum = 25.8125e3  # (Ohm)
-        i = self.X() / self.ivgain
+        i = self.R() / self.ivgain
         # ac excitation voltage at the sample
         v_sample = self.amplitude_true()
 
@@ -141,7 +141,7 @@ class SR830_T3(SR830):
         """
         get_cmd for resistance parameter
         """
-        i = self.X() / self.ivgain
+        i = self.R() / self.ivgain
         # ac excitation voltage at the sample
         v_sample = self.amplitude_true()
 
@@ -219,7 +219,7 @@ class Decadac_T3(Decadac):
         
         # Assign custom variable names
         lcut = int(config.get('Channel Parameters', 'left cutter'))
-        self.lcut = self.channels[lcut].volt
+        self.lcut = self.channels[lcut].volt    
         
         rcut = int(config.get('Channel Parameters', 'right cutter'))
         self.rcut = self.channels[rcut].volt
@@ -232,6 +232,7 @@ class Decadac_T3(Decadac):
         
         lplg = int(config.get('Channel Parameters', 'left plunger'))
         self.lplg = self.channels[lplg].volt
+        
         
         self.add_parameter('cutters',
                            label='{} cutters'.format(self.name),

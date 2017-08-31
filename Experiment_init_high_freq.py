@@ -111,8 +111,12 @@ if __name__ == '__main__':
 
     end = time.time()
     print("done Querying all instruments took {}".format(end-start))
-    my_init("natalie_playing", STATION,
-            display_pdf=False, display_individual_pdf=False)
+    my_init("AcQED_05_93_dev2", STATION,
+            pdf_folder=True, analysis_folder=True,
+            temp_dict_folder=True, waveforms_folder=True,
+            annotate_image=False, mainfolder= None, display_pdf=True,
+            display_individual_pdf=False, qubit_count=None,
+            plot_x_position=0.66)
 
     logger = logging.getLogger()
     logger.setLevel(logging.WARNING)
