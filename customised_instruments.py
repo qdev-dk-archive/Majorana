@@ -11,6 +11,7 @@ from qcodes.instrument_drivers.stanford_research.SR830 import ChannelBuffer
 from qcodes.instrument_drivers.Keysight.Keysight_34465A import Keysight_34465A
 from qcodes.instrument_drivers.devices import VoltageDivider
 from qcodes.instrument_drivers.Harvard.Decadac import Decadac
+from qcodes.utils import validators as vals
 
 from qcodes import ArrayParameter
 
@@ -197,11 +198,14 @@ class Decadac_T3(Decadac):
     A Decadac with one voltage dividers
     """
     def __init__(self, name, address, config, **kwargs):
+        self.config = config
+        deca_physical_min =  int(self.config.get('Decadac Range', 'min_volt'))
+        deca_physical_max =  int(self.config.get('Decadac Range', 'max_volt'))
+        kwargs.update({'min_val': deca_physical_min,
+                       'max_val': deca_physical_max})
         super().__init__(name, address, **kwargs)
 
         # Define the named channels
-        
-        self.config = config
         
         # Assign labels:
         labels = config.get('Decadac Channel Labels')
@@ -218,20 +222,20 @@ class Decadac_T3(Decadac):
         self.dcbias.label = config.get('Decadac Channel Labels', dcbias_i)
         
         # Assign custom variable names
-        lcut = int(config.get('Channel Parameters', 'left cutter'))
-        self.lcut = self.channels[lcut].volt
+        lcut = config.get('Channel Parameters', 'left cutter')
+        self.lcut = self.channels[int(lcut)].volt
         
-        rcut = int(config.get('Channel Parameters', 'right cutter'))
-        self.rcut = self.channels[rcut].volt
+        rcut = config.get('Channel Parameters', 'right cutter')
+        self.rcut = self.channels[int(rcut)].volt
         
-        jj = int(config.get('Channel Parameters', 'central cutter'))
-        self.jj = self.channels[jj].volt
+        jj = config.get('Channel Parameters', 'central cutter')
+        self.jj = self.channels[int(jj)].volt
         
-        rplg = int(config.get('Channel Parameters', 'right plunger'))
-        self.rplg = self.channels[rplg].volt
+        rplg = config.get('Channel Parameters', 'right plunger')
+        self.rplg = self.channels[int(rplg)].volt
         
-        lplg = int(config.get('Channel Parameters', 'left plunger'))
-        self.lplg = self.channels[lplg].volt
+        lplg = config.get('Channel Parameters', 'left plunger')
+        self.lplg = self.channels[int(lplg)].volt
         
         self.add_parameter('cutters',
                            label='{} cutters'.format(self.name),
@@ -240,6 +244,45 @@ class Decadac_T3(Decadac):
                            set_cmd=self.set_cutters,
                            unit='V',
                            get_parser=float)
+
+        # Set up voltage safety limits in software
+
+        # limits on voltage allowed
+        lcut_limits = config.get('Decadac Channel Limits', lcut).split(' ')
+        self.lcut.set_validator(vals.Numbers(float(lcut_limits[0]), float(lcut_limits[1])))
+
+        rcut_limits = config.get('Decadac Channel Limits', rcut).split(' ')
+        self.rcut.set_validator(vals.Numbers(float(rcut_limits[0]), float(rcut_limits[1])))
+ 
+        jj_limits = config.get('Decadac Channel Limits', jj).split(' ')
+        self.jj.set_validator(vals.Numbers(float(jj_limits[0]), float(jj_limits[1])))
+
+        rplg_limits = config.get('Decadac Channel Limits', rplg).split(' ')
+        self.rplg.set_validator(vals.Numbers(float(rplg_limits[0]), float(rplg_limits[1])))
+
+        lplg_limits = config.get('Decadac Channel Limits', lplg).split(' ')
+        self.lplg.set_validator(vals.Numbers(float(lplg_limits[0]), float(lplg_limits[1])))
+
+        # limits on ramp speeds
+        lcut_ramp_settings = config.get('Decadac Channel Ramp Setttings', lcut).split(' ')
+        self.lcut.set_step(float(lcut_ramp_settings[0]))
+        self.lcut.set_delay(float(lcut_ramp_settings[1]))
+
+        rcut_ramp_settings = config.get('Decadac Channel Ramp Setttings', rcut).split(' ')
+        self.rcut.set_step(float(rcut_ramp_settings[0]))
+        self.rcut.set_delay(float(rcut_ramp_settings[1]))
+ 
+        jj_ramp_settings = config.get('Decadac Channel Ramp Setttings', jj).split(' ')
+        self.jj.set_step(float(jj_ramp_settings[0]))
+        self.jj.set_delay(float(jj_ramp_settings[1]))
+
+        rplg_ramp_settings = config.get('Decadac Channel Ramp Setttings', rplg).split(' ')
+        self.rplg.set_step(float(rplg_ramp_settings[0]))
+        self.rplg.set_delay(float(rplg_ramp_settings[1]))
+
+        lplg_ramp_settings = config.get('Decadac Channel Ramp Setttings', lplg).split(' ')
+        self.lplg.set_step(float(lplg_ramp_settings[0]))
+        self.lplg.set_delay(float(lplg_ramp_settings[1]))
 
 
     def set_all(self, voltage_value, set_dcbias=False):
