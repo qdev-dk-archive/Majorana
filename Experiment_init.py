@@ -68,7 +68,7 @@ if __name__ == '__main__':
         close_station(qc.Station.default)
 
     # Initialisation of intruments
-    deca = Decadac_T3('Decadac', 'ASRL1::INSTR', config, min_val=-10, max_val=10)
+    deca = Decadac_T3('Decadac', 'ASRL1::INSTR', config)
 
     # lockin_1 = SR830_T10('lockin_1', 'GPIB0::1::INSTR')
     lockin_2 = SR830_T3('lockin_2', 'GPIB0::2::INSTR', config)
