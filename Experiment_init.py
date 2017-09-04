@@ -36,7 +36,7 @@ from qcodes.instrument_drivers.oxford.mercuryiPS import MercuryiPS
 # import qcodes.instrument_drivers.HP .HP8133A as hpsg
 import qcodes.instrument_drivers.rohde_schwarz.ZNB as vna
 
-from qcodes.utils.configreader import Config
+from qcodes.utils.natalie_wrapper.configreader import Config
 from qcodes.utils.validators import Numbers
 import logging
 import re

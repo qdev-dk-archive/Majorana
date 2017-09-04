@@ -10,7 +10,8 @@ mpl.rcParams['figure.figsize'] = (8, 3)
 mpl.rcParams['figure.subplot.bottom'] = 0.15
 mpl.rcParams['font.size'] = 8
 
-from qcodes.utils.configreader import Config
+from qcodes.utils.natalie_wrappers.file_setup import CURRENT_EXPERIMENT
+from qcodes.utils.nayalie_wrappers.configreader import Config
 from qcodes.utils.natalie_wrappers.file_setup import close_station, my_init
 
 from majorana_wrappers import *
@@ -30,18 +31,25 @@ if __name__ == '__main__':
 
     init_log = logging.getLogger(__name__)
 
-    # Load config
-    config = Config('D:\MajoranacQED\Majorana\sample.config')
-    Config.default = config
-
     # Close existing connections if present
     if qc.Station.default:
         close_station(qc.Station.default)
 
-    # Initialise intruments
-    deca = Decadac_T3('Decadac', 'ASRL1::INSTR', config)
+    # Set up folders, settings and logging for the experiment
+    my_init("natalie_playing", STATION,
+            display_pdf=False, display_individual_pdf=False)
 
-    lockin_2 = SR830_T3('lockin_2', 'GPIB0::2::INSTR', config)
+    # Load config
+    instr_config = Config(
+        "{}{}".format(CURRENT_EXPERIMENT['exp_folder'], 'instr.config'),
+        isdefault=True)
+
+    STATION = qc.Station()
+
+    # Initialise intruments
+    deca = Decadac_T3('Decadac', 'ASRL1::INSTR', instr_config)
+
+    lockin_2 = SR830_T3('lockin_2', 'GPIB0::2::INSTR', instr_config)
 
     mercury = MercuryiPS(name='mercury',
                          address='172.20.10.148',
@@ -52,11 +60,11 @@ if __name__ == '__main__':
                   init_s_params=False)
     vna.add_channel('S21')
 
-    STATION = qc.Station(lockin_2, mercury, deca, vna)
-
-    # Set up folders, settings and logging for the experiment
-    my_init("natalie_playing", STATION,
-            display_pdf=False, display_individual_pdf=False)
+    # Add instruments to station so that metadata for them is recorded at
+    # each measurement and connections are closed at end of session
+    STATION.add_component(deca)
+    STATION.add_component(lockin_2)
+    STATION.add_component(vna)
 
     # Set log level
     logger = logging.getLogger()
