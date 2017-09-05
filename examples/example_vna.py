@@ -16,16 +16,24 @@ v1.rf_on()
 #%% Do a measurement 
 ### Define parameters for traces:
 
-v1.channels.S21.start(5.0e9)
-v1.channels.S21.stop(5.4e9)
+v1.channels.S21.start(5.31e9)
+v1.channels.S21.stop(5.36e9)
+
+#v1.channels.S21.start(5e9)
+#v1.channels.S21.stop(7e9)
 
 npts = 501
 v1.channels.S21.npts(npts)
 
 ## sweep left cutter and take traces
-do1d(deca.lcut, 0, -0.001, 10, 0.1, v1.channels.S21.trace)
+
+do1d(dummy_time, 0, 120, 121, 1, v1.channels.S21.trace)
+
+#do1d(deca.lplg, 0, -1, 501, 1, v1.channels.S21.trace)
 
 ### define a frequency span
 #v1.channels.S11.span(200e3)
 #v1.channels.S11.center(1e6)
 #v1.channels.S11.npts(100)
+
+#do1d(deca.rplg, 0, -1, 101, 1,v1.channels.S21.trace)

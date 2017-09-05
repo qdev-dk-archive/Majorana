@@ -76,7 +76,13 @@ if __name__ == '__main__':
 
     # lockin_1 = SR830_T10('lockin_1', 'GPIB0::1::INSTR')
     lockin_2 = SR830_T3('lockin_2', 'GPIB0::2::INSTR', config)
-
+    alazar = import_alazar(name='alazar')
+    ave_ctrl = import_acq_controller(alazar, name='ave_ctrl')
+    rec_ctrl= import_acq_controller(alazar, name='rec_ctrl')
+    samp_ctrl= import_acq_controller(alazar, name='samp_ctrl')
+    localos = import_rs('TCPIP0::192.168.15.104::inst0::INSTR', name='localos_rs')
+    cavity = import_rs('TCPIP0::192.168.15.105::inst0::INSTR', name='cavity_rs')
+    awg = import_awg('TCPIP0::192.168.15.101::inst0::INSTR')
     # zi = ZIUHFLI_T10('ziuhfli', 'dev2189')
     # keysightgen_left = Keysight_33500B('keysight_gen_left', 'TCPIP0::192.168.15.101::inst0::INSTR')
     # keysightgen_left.add_function('sync_phase',call_cmd='SOURce1:PHASe:SYNChronize')
@@ -93,12 +99,15 @@ if __name__ == '__main__':
 
     v1 = vna.ZNB('VNA', 'TCPIP0::192.168.15.103::inst0::INSTR', init_s_params=False)
     v1.add_channel('S21')
+    
+    dummy_time = import_manual_param()
    
     print('Querying all instrument parameters for metadata.'
           'This may take a while...')
 
     start = time.time()
-    STATION = qc.Station( lockin_2, mercury, deca, v1)
+    STATION = qc.Station( lockin_2, mercury, deca, v1, alazar, ave_ctrl, rec_ctrl, samp_ctrl,
+                         localos, cavity, awg)
                         # lockin_1, deca)
                          # keysightgen_left, keysightgen_mid, keithleybot_a,
                          # keysightdmm_mid, keysightdmm_bot,
@@ -111,11 +120,11 @@ if __name__ == '__main__':
 
     end = time.time()
     print("done Querying all instruments took {}".format(end-start))
-    my_init("AcQED_05_93_dev2", STATION,
+    my_init("AcQED_05_73_dev1", STATION,
             pdf_folder=True, analysis_folder=True,
             temp_dict_folder=True, waveforms_folder=True,
             annotate_image=False, mainfolder= None, display_pdf=True,
-            display_individual_pdf=False, qubit_count=None,
+            display_individual_pdf=False, qubit_count=1,
             plot_x_position=0.66)
 
     logger = logging.getLogger()
@@ -133,7 +142,14 @@ if __name__ == '__main__':
     qc.Monitor(mercury.x_fld, mercury.y_fld, mercury.z_fld,
                 deca.dcbias, deca.lcut, deca.rcut, deca.jj, deca.rplg,
                 deca.lplg,
-                lockin_2.acbias)#, v1.channels.S21.power
+                lockin_2.acbias,
+                samp_ctrl.num_avg, samp_ctrl.int_time, samp_ctrl.int_delay,
+                rec_ctrl.num_avg, rec_ctrl.int_time, rec_ctrl.int_delay,
+                ave_ctrl.num_avg, ave_ctrl.int_time, ave_ctrl.int_delay,
+                awg.state, awg.ch1_amp, awg.ch1_state, alazar.seq_mode,
+                cavity.frequency, localos.frequency, cavity.power, localos.power,
+                cavity.status, localos.status)
+    #, v1.channels.S21.power
                 #)
 
     # lockin_1.acfactor = float(config.get('Gain settings','ac factor'))
