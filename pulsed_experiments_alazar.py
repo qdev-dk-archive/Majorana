@@ -1,11 +1,12 @@
 import numpy as np
 from inspect import signature
-from Typing import List
+from Typing import List, Dict
 
 import broadbean as bb
 import qcodes as qc
 from qcodes.instrument.parameter import ArrayParameter, StandardParameter
 from qcodes.utils.wrappers import do1d
+from qcodes.instrument_drivers.tektronix.AWG5014 import Tektronix_AWG5014
 
 ramp = bb.PulseAtoms.ramp
 sine = bb.PulseAtoms.sine
@@ -59,11 +60,30 @@ class PulseTime(StandardParameter):
     """
     The parameter setting a new pulsetime.
 
-    TODO: write
+    We assume that the full pulse sequence consists of some master router
+    segment plus different parts of the sequence corresponding to different
+    pulse times.
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, awg: Tektronix_AWG5014,
+                 mapping: Dict[float, int]) -> None:
+        """
+        Args:
+            awg: The AWG instance that runs the pulse sequence
+            mapping: The mapping from pulse time to awg event jump target
+        """
+        self._awg = awg
+        self._mapping = mapping
+
+    def set(self, arg: float) -> None:
+        """
+        Set function
+        """
+        if arg not in self._mapping.keys():
+            raise ValueError('Wrong pulse time specified!')
+
+        jt = self._mapping[arg]
+        self.awg.set_sqel_event_target_index(1, jt)
 
 
 def _DPE_prepareKeysight(no_of_pulses=None, cycletime=None, ramp_low=None,
@@ -381,7 +401,9 @@ def doPulsedExperiment(fast_axis=None, slow_axis=None,
     """
     Top level function for performing pulsed experiments, i.e. sending a
     single square pulse riding on a ramp to the sample and measuring by
-    demodulating and shining RF with a ZI UHF-LI
+    demodulating and shining RF with a
+
+    TODO: update to new FULL sequence paradigm
     """
 
     # INPUT VALIDATORS
@@ -433,6 +455,11 @@ def doPulsedExperiment(fast_axis=None, slow_axis=None,
 
     # Make the two measurement parameters
     if slow_axis == 'dt':
+        # Make the translation from pulse width to position in the sequence
+        # { pulsetime: jump event target }
+        pulsetimes = np.linspace(slow_start, slow_stop, slow_npts)
+        jets = [2+ii*4 for ii in range(slow_npts)]
+        pulsetrans = dict(zip(pulsetimes, jets))
         pulseTime = PulseTime(name='pulse_time', basesequence=base_sequence,
                               pos=3, chan=1, segname='high', awg=awg,
                               awgchannels=[awg_channel])
