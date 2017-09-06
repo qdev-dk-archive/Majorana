@@ -129,7 +129,7 @@ if __name__ == '__main__':
     print("done Querying all instruments took {}".format(end - start))
 
     # Put parameters into monitor
-    qc.Monitor(mercury.x_fld, mercury.y_fld, mercury.z_fld,
+    wrappers.Monitor(mercury.x_fld, mercury.y_fld, mercury.z_fld,
                deca.dcbias, deca.lcut, deca.rcut, deca.jj, deca.rplg,
                deca.lplg,
                lockin_2.acbias,
