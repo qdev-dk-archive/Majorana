@@ -10,9 +10,9 @@ mpl.rcParams['figure.figsize'] = (8, 3)
 mpl.rcParams['figure.subplot.bottom'] = 0.15
 mpl.rcParams['font.size'] = 8
 
-from qcodes.utils.natalie_wrappers.file_setup import CURRENT_EXPERIMENT
-from qcodes.utils.nayalie_wrappers.configreader import Config
-from qcodes.utils.natalie_wrappers.file_setup import close_station, my_init
+from wrappers.file_setup import CURRENT_EXPERIMENT
+from wrappers.configreader import Config
+from wrappers.file_setup import close_station, my_init
 from qcodes import ManualParameter
 
 from majorana_wrappers import *
