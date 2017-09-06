@@ -4,6 +4,7 @@ from Typing import List, Dict
 
 import broadbean as bb
 import qcodes as qc
+from broadbean import Sequence
 from qcodes.instrument.parameter import ArrayParameter, StandardParameter
 from qcodes.utils.wrappers import do1d
 from qcodes.instrument_drivers.tektronix.AWG5014 import Tektronix_AWG5014
@@ -54,6 +55,7 @@ class AverageRampResponse(ArrayParameter):
 
     def __init__(self):
         pass
+
 
 
 class PulseTime(StandardParameter):
@@ -112,15 +114,18 @@ def _DPE_prepareKeysight(no_of_pulses=None, cycletime=None, ramp_low=None,
     keysight.ch1_burst_state('ON')
 
 
-def _DPE_prepareTektronixAWG(awg, awg_channel, SR, pulsehigh):
+def _DPE_prepareTektronixAWG(awg: Tektronix_AWG5014, awg_channel: int,
+                             SR: int, pulsehigh: float,
+                             sequence: Sequence) -> None:
     """
     Prepare the AWG.
 
     Args:
-        awg (Tektronix_AWG5014): QCoDeS instrument instance
-        awg_channel (int): The awg channel to use (1-4)
-        SR (int): The sample rate (Sa/s)
-        pulsehigh (float): The highest level of the desired pulse
+        awg: QCoDeS instrument instance
+        awg_channel: The awg channel to use (1-4)
+        SR: The sample rate (Sa/s)
+        pulsehigh: The highest level of the desired pulse
+        sequence: The full pulse sequence
     """
 
     # NB: If you change these settings, make sure to change them in
@@ -131,6 +136,9 @@ def _DPE_prepareTektronixAWG(awg, awg_channel, SR, pulsehigh):
     awg.parameters['ch{}_offset'.format(awg_channel)].set(0)
     awg.parameters['ch{}_state'.format(awg_channel)].set(1)
     awg.parameters['ch{}_add_input'.format(awg_channel)].set('"ESIG"')
+
+    pkg = sequence.outputForAWGFile()
+    awg.make_send_and_load_awg_file(*pkg[:])
 
 
 def _DPE_prepareAlazar():
@@ -172,33 +180,43 @@ def _DPE_correct_meastime(meastime: float, npts: int,
     return newtime
 
 
-def _DPE_makeFullSequence(hightimes, trig_delay, meastime, prewaittime,
-                          cycletime, no_of_avgs,
-                          no_of_pulses, pulsehigh, SR, segname):
+def _DPE_makeFullSequence(hightimes: List[float],
+                          trig_delay: float,
+                          meastime: float, prewaittime: float,
+                          cycletime: float, no_of_avgs: int,
+                          no_of_pulses: int, pulsehigh: float,
+                          SR: int, segname: str) -> Sequence:
     """
     Generate the full sequence (to be uploaded exactly once).
 
+    This sequence assumes that the pulse width is being varied on the slow
+    measurement axis.
+
     The sequence is a varied sequence with a baseelement consisting
     of four parts:
-    1: A wait with zeros allowing the ZI to get ready. This part is
+    1: A wait with zeros allowing the ADC to get ready. This part is
     short, but repeated waitbits times
     2: A short zero part with the marker2 trigger for the ramp
-    3: The high pulse and a marker1 trigger for the ZI
+    3: The high pulse and a marker1 trigger for the ADC
     4: A short zero part with an event jump leading back to part one.
     This leading back happens no_of_avgs times.
 
     Args:
-        hightime (float): The width of the pulse (s)p
-        trig_delay (float): The delay to start measuring after the end of the
+        hightimes: The widths of the pulses (s) throughout the sequences
+        trig_delay: The delay to start measuring after the end of the
             pulse (s).
-        meastime (float): The time of each measurement (s).
-        prewaittime (float): The time to wait before each ramp (s).
-        cycletime (float): The time of each ramp (s).
-        no_of_pulses (int): The number of pulse per ramp.
-        pulsehigh (float): The amplitude of the pulse (V)
-        SR (int): The AWG sample rate (Sa/s)
-        segname (str): The name of the high pulse segment as used internally
+        meastime: The time of each measurement (s).
+        prewaittime: The time to wait before each ramp (s).
+        cycletime : The time of each ramp (s).
+        no_of_pulses: The number of pulses per ramp.
+        no_of_avgs: The number of averages of each measurement point.
+        pulsehigh: The amplitude of the pulse (V)
+        SR: The AWG sample rate (Sa/s)
+        segname: The name of the high pulse segment as used internally
             by broadbean.
+
+    Returns:
+        The full sequence element.
     """
 
     waitbits = 100  # no. of repetitions of the first part
@@ -229,7 +247,7 @@ def _DPE_makeFullSequence(hightimes, trig_delay, meastime, prewaittime,
 
     bp_ramptrig = bb.BluePrint()  # segment to trigger the ramp
     bp_ramptrig.insertSegment(0, 'waituntil', trig_duration)
-    bp_ramptrig.marker2 = [(0, trig_duration)]  # the signal to trigger a new ramp
+    bp_ramptrig.marker2 = [(0, trig_duration)]  # signal to trigger a new ramp
     bp_ramptrig.setSR(SR)
 
     bp_return = bb.BluePrint()
@@ -301,84 +319,6 @@ def _DPE_makeFullSequence(hightimes, trig_delay, meastime, prewaittime,
     return fullseq
 
 
-def _DPE_makeSequence(hightime, trig_delay, meastime, prewaittime,
-                      cycletime,
-                      no_of_pulses, pulsehigh, SR, segname):
-    """
-    Generate the pulse sequence for the experiment.
-
-    The sequence consists of three parts:
-    1: A wait with zeros allowing the ZI to get ready. This part is
-    short, but repeated waitbits times
-    2: A short zero part with the marker2 trigger for the ramp
-    3: The high pulse and a marker1 trigger for the ZI
-
-    Args:
-        hightime (float): The width of the pulse (s)p
-        trig_delay (float): The delay to start measuring after the end of the
-            pulse (s).
-        meastime (float): The time of each measurement (s).
-        prewaittime (float): The time to wait before each ramp (s).
-        cycletime (float): The time of each ramp (s).
-        no_of_pulses (int): The number of pulse per ramp.
-        pulsehigh (float): The amplitude of the pulse (V)
-        SR (int): The AWG sample rate (Sa/s)
-        segname (str): The name of the high pulse segment as used internally
-            by broadbean.
-    """
-
-    waitbits = 100  # no. of repetitions of the first part
-    waitbittime = prewaittime/waitbits
-    trig_duration = 5e-6
-
-    if waitbittime < 10/SR:
-        raise ValueError('prewaittime too short.')
-
-    # The pulsed part
-    bp1 = bb.BluePrint()
-    bp1.setSR(SR)
-    bp1.insertSegment(0, ramp, (pulsehigh, pulsehigh),
-                      durs=hightime, name=segname)
-    bp1.insertSegment(1, ramp, (0, 0), durs=meastime, name='measure')
-    # dead time for the scope to re-arm its trigger
-    bp1.insertSegment(2, 'waituntil', cycletime)
-    bp1.marker1 = [(hightime+trig_delay, 10e-6)]
-
-    # initial wait time to allow ZI trigger to get ready. This BP is repeated
-    bp3 = bb.BluePrint()
-    bp3.setSR(SR)
-    bp3.insertSegment(0, 'waituntil', waitbittime)
-
-    bp4 = bb.BluePrint()  # segment to trigger the ramp
-    bp4.insertSegment(0, 'waituntil', trig_duration)
-    bp4.marker2 = [(0, trig_duration)]  # the signal to trigger a new ramp
-    bp4.setSR(SR)
-
-    mainelem = bb.Element()
-    mainelem.addBluePrint(1, bp1)
-
-    trigelem = bb.Element()
-    trigelem.addBluePrint(1, bp4)
-
-    resetelem = bb.Element()
-    resetelem.addBluePrint(1, bp3)
-
-    seq = bb.Sequence()
-    seq.addElement(1, resetelem)
-    seq.addElement(2, trigelem)
-    seq.addElement(3, mainelem)
-    seq.setSR(SR)
-
-    seq.setChannelVoltageRange(1, 2*pulsehigh, 0)
-
-    seq.setSequenceSettings(1, 0, waitbits, 0, 2)
-    seq.setSequenceSettings(2, 0, 1, 0, 3)
-    # the last zero disables jumping, i.e. seq. plays once
-    seq.setSequenceSettings(3, 0, no_of_pulses, 0, 0)
-
-    return seq
-
-
 @check_kwargs
 def doPulsedExperiment(fast_axis=None, slow_axis=None,
                        slow_start=None, slow_stop=None, slow_npts=None,
@@ -437,14 +377,16 @@ def doPulsedExperiment(fast_axis=None, slow_axis=None,
                          ramp_low=fast_start, ramp_high=fast_stop,
                          keysight=keysight)
 
-    # AWG
-    _DPE_prepareTektronixAWG(awg=awg, awg_channel=awg_channel, SR=SR,
-                             pulsehigh=pulsehigh)
-
     # Alazar
     _DPE_prepareAlazar()
 
     # Build the basesequence
+    pulse_sequence = _DPE_makeFullSequence(hightimes, trig_delay, meastime,
+                                           prewaittime,
+                                           cycletime, no_of_avgs,
+                                           no_of_pulses, pulsehigh, SR,
+                                           segname)
+
     base_sequence = _DPE_makeSequence(hightime=hightime, trig_delay=trig_delay,
                                       meastime=meastime,
                                       prewaittime=transfertime,
@@ -453,6 +395,10 @@ def doPulsedExperiment(fast_axis=None, slow_axis=None,
                                       pulsehigh=pulsehigh,
                                       SR=SR, segname='high')
 
+    # AWG
+    _DPE_prepareTektronixAWG(awg=awg, awg_channel=awg_channel, SR=SR,
+                             pulsehigh=pulsehigh)
+
     # Make the two measurement parameters
     if slow_axis == 'dt':
         # Make the translation from pulse width to position in the sequence
@@ -460,9 +406,8 @@ def doPulsedExperiment(fast_axis=None, slow_axis=None,
         pulsetimes = np.linspace(slow_start, slow_stop, slow_npts)
         jets = [2+ii*4 for ii in range(slow_npts)]
         pulsetrans = dict(zip(pulsetimes, jets))
-        pulseTime = PulseTime(name='pulse_time', basesequence=base_sequence,
-                              pos=3, chan=1, segname='high', awg=awg,
-                              awgchannels=[awg_channel])
+        pulseTime = PulseTime(name='pulse_time', awg=awg,
+                              mapping=pulsetrans)
 
     # setpoints
     voltages = np.linspace(fast_start, fast_stop, fast_npts)
@@ -489,6 +434,8 @@ def showPulsedExperiment(fast_npts=None,
                          trig_delay=None):
     """
     Function to visualise the pulsed experiment
+
+    TODO: Update to visualising the full sequence
     """
 
     seq = _DPE_makeSequence(hightime=hightime,
@@ -501,12 +448,3 @@ def showPulsedExperiment(fast_npts=None,
                             SR=1e9, segname='high')
 
     seq.plotSequence()
-
-
-def print_all_instruments():
-    """
-    Just me testing a clever use of a class variable
-    """
-    station = qc.Station.default
-
-    print(station.components)
