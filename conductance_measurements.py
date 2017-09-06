@@ -6,7 +6,7 @@ from time import sleep
 import numpy as np
 import qcodes as qc
 from qcodes.instrument.parameter import Parameter
-from qcodes.utils.natalie_wrappers.sweep_functions import _do_measurement
+from wrappers.sweep_functions import _do_measurement
 from qcodes.instrument_drivers.QDev.QDac_channels import QDac as QDacch
 
 from customised_instruments import SR830_T3

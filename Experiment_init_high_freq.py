@@ -3,7 +3,7 @@ import time
 import sys
 import logging
 import numpy as np
-
+from os.path import sep
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 mpl.rcParams['figure.figsize'] = (8, 3)
@@ -15,6 +15,7 @@ from wrappers.configreader import Config
 from wrappers.file_setup import close_station, my_init
 from qcodes import ManualParameter
 
+from wrappers import *
 from majorana_wrappers import *
 from reload_settings import *
 from customised_instruments import SR830_T3, Decadac_T3, AWG5014_T3, \
@@ -41,21 +42,24 @@ if __name__ == '__main__':
     STATION = qc.Station()
 
     # Set up folders, settings and logging for the experiment
-    my_init("AcQED_05_73_dev1", STATION,
+    my_init("NATALIE", STATION,
             pdf_folder=True, analysis_folder=True,
             temp_dict_folder=True, waveforms_folder=True,
             annotate_image=False, mainfolder=None, display_pdf=True,
             display_individual_pdf=False, qubit_count=1,
             plot_x_position=0.66)
 
-    # Load config
-    instr_config = Config(
-        "{}{}".format(CURRENT_EXPERIMENT['exp_folder'], 'instr.config'),
-        isdefault=True)
+    # Load config from experiment file, if none found then uses one in mainfolder
+    cfg_file = "{}{}".format(CURRENT_EXPERIMENT['exp_folder'], 'instr.config')
+    instr_config = Config(cfg_file, isdefault=True)
+    if len(instr_config.sections()) == 0:
+        cfg_file = sep.join([CURRENT_EXPERIMENT['mainfolder'], 'instr.config'])
+        instr_config = Config(cfg_file, isdefault=True)
+        
 
     # Initialise intruments
     deca = Decadac_T3('Decadac', 'ASRL1::INSTR', instr_config)
-    lockin_2 = SR830_T3('lockin_2', 'GPIB0::2::INSTR', config)
+    lockin_2 = SR830_T3('lockin_2', 'GPIB0::2::INSTR', instr_config)
     alazar = AlazarTech_ATS9360_T3('alazar', seq_mode='off')
     ave_ctrl = ATS9360Controller_T3('ave_ctrl', alazar, ctrl_type='ave')
     rec_ctrl = ATS9360Controller_T3('rec_ctrl', alazar, ctrl_type='rec')
@@ -79,14 +83,14 @@ if __name__ == '__main__':
     STATION.add_component(deca)
     STATION.add_component(lockin_2)
     STATION.add_component(vna)
-    STATION.add_componenet(mercury)
-    STATION.add_componenet(alazar)
-    STATION.add_componenet(ave_ctrl)
-    STATION.add_componenet(rec_ctrl)
-    STATION.add_componenet(samp_ctrl)
-    STATION.add_componenet(localos)
-    STATION.add_componenet(cavity)
-    STATION.add_componenet(awg)
+    STATION.add_component(mercury)
+    STATION.add_component(alazar)
+    STATION.add_component(ave_ctrl)
+    STATION.add_component(rec_ctrl)
+    STATION.add_component(samp_ctrl)
+    STATION.add_component(localos)
+    STATION.add_component(cavity)
+    STATION.add_component(awg)
 
     # Set log level
     logger = logging.getLogger()
@@ -129,7 +133,7 @@ if __name__ == '__main__':
     print("done Querying all instruments took {}".format(end - start))
 
     # Put parameters into monitor
-    wrappers.Monitor(mercury.x_fld, mercury.y_fld, mercury.z_fld,
+    Monitor(mercury.x_fld, mercury.y_fld, mercury.z_fld,
                deca.dcbias, deca.lcut, deca.rcut, deca.jj, deca.rplg,
                deca.lplg,
                lockin_2.acbias,

@@ -16,7 +16,7 @@ from qcodes.instrument_drivers.yokogawa.GS200 import GS200
 from qcodes.instrument_drivers.devices import VoltageDivider
 from qcodes.instrument_drivers.Harvard.Decadac import Decadac
 from qcodes.utils import validators as vals
-
+from qcodes import ManualParameter
 from qcodes import ArrayParameter
 
 
@@ -199,7 +199,7 @@ class QDAC_T10(QDac):
                            get_parser=float)
 
         self.topo_bias = VoltageDivider(topo_channel,
-                                        float(config.get('Gain settings',
+                                        float(config.get('Gain Settings',
                                                          'dc factor topo')))
 
 
@@ -228,7 +228,7 @@ class Decadac_T3(Decadac):
                                   'source channel'))
         dcbias = self.channels[dcbias_i].volt
         self.dcbias = VoltageDivider(dcbias,
-                                     float(config.get('Gain settings',
+                                     float(config.get('Gain Settings',
                                                       'dc factor')))
         self.dcbias.label = config.get('Decadac Channel Labels', dcbias_i)
 
@@ -397,8 +397,8 @@ class AlazarTech_ATS9360_T3(AlazarTech_ATS9360):
                     aux_io_param=io_param
                     )
         self.add_parameter(name='seq_mode',
-                           get_cmd=_get_seq_mod,
-                           set_cmd=_set_seq_mode,
+                           get_cmd=self._get_seq_mod,
+                           set_cmd=self._set_seq_mode,
                            vals=vals.Anything()
                            )
 
@@ -415,15 +415,15 @@ class AlazarTech_ATS9360_T3(AlazarTech_ATS9360):
 
     def _set_seq_mode(self, mode):
         if mode is 'on':
-            alazar.config(sample_rate=alazar.sample_rate(),
-                          clock_edge=alazar.clock_edge(),
-                          clock_source=alazar.clock_source(),
+            self.config(sample_rate=self.sample_rate(),
+                          clock_edge=self.clock_edge(),
+                          clock_source=self.clock_source(),
                           aux_io_mode='AUX_IN_TRIGGER_ENABLE',
                           aux_io_param='TRIG_SLOPE_POSITIVE')
         elif mode is 'off':
-            alazar.config(sample_rate=alazar.sample_rate(),
-                          clock_edge=alazar.clock_edge(),
-                          clock_source=alazar.clock_source(),
+            self.config(sample_rate=self.sample_rate(),
+                          clock_edge=self.clock_edge(),
+                          clock_source=self.clock_source(),
                           aux_io_mode='AUX_IN_AUXILIARY',
                           aux_io_param='NONE')
         else:
@@ -450,7 +450,7 @@ class ATS9360Controller_T3(ATS9360Controller):
                          average_records=average_records)
 
 
-class AWG5014_T3(AWG5014):
+class AWG5014_T3(Tektronix_AWG5014):
     def __init__(self, name, visa_address, **kwargs):
         super().__init__(name, visa_address, **kwargs)
         self.add_parameter(name='current_seq',

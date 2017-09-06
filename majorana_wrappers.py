@@ -13,9 +13,9 @@ import logging
 import os
 import time
 
-from qcodes.utils.natalie_wrappers.plot_functions import _plot_setup, _save_individual_plots
-from qcodes.utils.natalie_wrappers.sweep_functions import  do1d, do2d
-from qcodes.utils.natalie_wrappers.show_num import show_num
+from wrappers.plot_functions import _plot_setup, _save_individual_plots
+from wrappers.sweep_functions import  do1d, do2d
+from wrappers.show_num import show_num
 from reload_settings import used_channels
 
 ##################################################
