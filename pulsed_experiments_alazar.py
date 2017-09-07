@@ -1,6 +1,7 @@
 import numpy as np
 from inspect import signature
-from Typing import List, Dict
+from typing import List, Dict
+import logging
 
 import broadbean as bb
 import qcodes as qc
@@ -8,6 +9,8 @@ from broadbean import Sequence
 from qcodes.instrument.parameter import ArrayParameter, StandardParameter
 from qcodes.utils.wrappers import do1d
 from qcodes.instrument_drivers.tektronix.AWG5014 import Tektronix_AWG5014
+
+log = logging.getLogger(__name__)
 
 ramp = bb.PulseAtoms.ramp
 sine = bb.PulseAtoms.sine
@@ -55,7 +58,6 @@ class AverageRampResponse(ArrayParameter):
 
     def __init__(self):
         pass
-
 
 
 class PulseTime(StandardParameter):
@@ -131,14 +133,14 @@ def _DPE_prepareTektronixAWG(awg: Tektronix_AWG5014, awg_channel: int,
     # NB: If you change these settings, make sure to change them in
     # _DPE_makeSequence as well!
 
+    pkg = sequence.outputForAWGFile()
+    awg.make_send_and_load_awg_file(*pkg[:])
+
     awg.clock_freq(SR)
     awg.parameters['ch{}_amp'.format(awg_channel)].set(2*pulsehigh)
     awg.parameters['ch{}_offset'.format(awg_channel)].set(0)
     awg.parameters['ch{}_state'.format(awg_channel)].set(1)
     awg.parameters['ch{}_add_input'.format(awg_channel)].set('"ESIG"')
-
-    pkg = sequence.outputForAWGFile()
-    awg.make_send_and_load_awg_file(*pkg[:])
 
 
 def _DPE_prepareAlazar():
@@ -183,7 +185,7 @@ def _DPE_correct_meastime(meastime: float, npts: int,
 def _DPE_makeFullSequence(hightimes: List[float],
                           trig_delay: float,
                           meastime: float, prewaittime: float,
-                          cycletime: float, no_of_avgs: int,
+                          cycletime: float,
                           no_of_pulses: int, pulsehigh: float,
                           SR: int, segname: str) -> Sequence:
     """
@@ -209,7 +211,6 @@ def _DPE_makeFullSequence(hightimes: List[float],
         prewaittime: The time to wait before each ramp (s).
         cycletime : The time of each ramp (s).
         no_of_pulses: The number of pulses per ramp.
-        no_of_avgs: The number of averages of each measurement point.
         pulsehigh: The amplitude of the pulse (V)
         SR: The AWG sample rate (Sa/s)
         segname: The name of the high pulse segment as used internally
@@ -219,9 +220,10 @@ def _DPE_makeFullSequence(hightimes: List[float],
         The full sequence element.
     """
 
-    waitbits = 100  # no. of repetitions of the first part
+    waitbits = 10  # no. of repetitions of the first part
     waitbittime = prewaittime/waitbits
     trig_duration = 5e-6
+    min_npts_as_time = 250/SR
 
     if waitbittime < 10/SR:
         raise ValueError('prewaittime too short.')
@@ -243,7 +245,7 @@ def _DPE_makeFullSequence(hightimes: List[float],
 
     bp_minimalwait = bb.BluePrint()
     bp_minimalwait.setSR(SR)
-    bp_minimalwait.insertSegment(0, 'waituntil', 10/SR)  # FIXME!
+    bp_minimalwait.insertSegment(0, 'waituntil', min_npts_as_time)
 
     bp_ramptrig = bb.BluePrint()  # segment to trigger the ramp
     bp_ramptrig.insertSegment(0, 'waituntil', trig_duration)
@@ -251,7 +253,7 @@ def _DPE_makeFullSequence(hightimes: List[float],
     bp_ramptrig.setSR(SR)
 
     bp_return = bb.BluePrint()
-    bp_return.insertSegment(0, 'waituntil', 10/SR)
+    bp_return.insertSegment(0, 'waituntil', min_npts_as_time)
     bp_return.setSR(SR)
 
     # The one-element router sequence
@@ -315,6 +317,16 @@ def _DPE_makeFullSequence(hightimes: List[float],
         fullseq.setSequenceSettings(1+(ii+1)*4, 0, 0, 1, 0)
     # And set the routing element to route correctly for the first iteration
     fullseq.setSequenceSettings(1, 1, 1, 0, 2)
+
+    # TODO: this warning should be integrated at a lower level
+    els = [fullseq.element(n+1) for n in
+           range(fullseq.length_sequenceelements)]
+    elpoints = np.array([int(el.duration*el.SR) for el in els])
+    if elpoints.min() < 250:
+        log.warning('Sequence element no. {}'.format(elpoints.argmin()+1) +
+                    ' shorter than 250 points! AWG will run in software '
+                    'sequencer mode with limited functionality.')
+
 
     return fullseq
 
@@ -386,14 +398,6 @@ def doPulsedExperiment(fast_axis=None, slow_axis=None,
                                            cycletime, no_of_avgs,
                                            no_of_pulses, pulsehigh, SR,
                                            segname)
-
-    base_sequence = _DPE_makeSequence(hightime=hightime, trig_delay=trig_delay,
-                                      meastime=meastime,
-                                      prewaittime=transfertime,
-                                      cycletime=cycletime,
-                                      no_of_pulses=fast_npts,
-                                      pulsehigh=pulsehigh,
-                                      SR=SR, segname='high')
 
     # AWG
     _DPE_prepareTektronixAWG(awg=awg, awg_channel=awg_channel, SR=SR,
