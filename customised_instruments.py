@@ -11,6 +11,7 @@ from qcodes.instrument_drivers.stanford_research.SR830 import ChannelBuffer
 from qcodes.instrument_drivers.Keysight.Keysight_34465A import Keysight_34465A
 from qcodes.instrument_drivers.AlazarTech.ATS9360 import AlazarTech_ATS9360
 from qcodes.instrument_drivers.AlazarTech.acq_controllers import ATS9360Controller
+from qcodes.instrument_drivers.rohde_schwarz.ZNB import ZNB
 from qcodes.instrument_drivers.tektronix.AWG5014 import Tektronix_AWG5014
 from qcodes.instrument_drivers.yokogawa.GS200 import GS200
 from qcodes.instrument_drivers.devices import VoltageDivider
@@ -460,3 +461,13 @@ class AWG5014_T3(Tektronix_AWG5014):
                            vals=vals.Ints())
         self.ref_source('EXT')
         self.clear_message_queue()
+
+
+class VNA_T3(ZNB):
+    def __init__(self, name, visa_address, init_s_params=False, timeout=40):
+        super().__init__(name, visa_address, init_s_params=init_s_params, timeout=timeout)
+        self.add_channel('S21')
+        self.add_parameter(name='single_S21', get_cmd=self.get_single)
+        self.channels.S21.npts(1)
+    def get_single(self):
+        return self.channels.S21.trace_mag_phase()[0][0]

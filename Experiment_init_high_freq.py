@@ -19,14 +19,13 @@ from wrappers import *
 from majorana_wrappers import *
 from reload_settings import *
 from customised_instruments import SR830_T3, Decadac_T3, AWG5014_T3, \
-ATS9360Controller_T3, AlazarTech_ATS9360_T3
+ATS9360Controller_T3, AlazarTech_ATS9360_T3, VNA_T3
 helper_fns_folder = r'D:\Transmon\Qcodes-contrib'
 if helper_fns_folder not in sys.path:
     sys.path.insert(0, helper_fns_folder)
 from qdev_transmon_helpers import *
 
 from qcodes.instrument_drivers.oxford.mercuryiPS import MercuryiPS
-import qcodes.instrument_drivers.rohde_schwarz.ZNB as VNA
 from qcodes.instrument_drivers.rohde_schwarz.SGS100A import RohdeSchwarz_SGS100A
 
 from conductance_measurements import do2Dconductance
@@ -42,7 +41,7 @@ if __name__ == '__main__':
     STATION = qc.Station()
 
     # Set up folders, settings and logging for the experiment
-    my_init("NATALIE", STATION,
+    my_init("AcQED_05_98_dev1", STATION,
             pdf_folder=True, analysis_folder=True,
             temp_dict_folder=True, waveforms_folder=True,
             annotate_image=False, mainfolder=None, display_pdf=True,
@@ -59,7 +58,7 @@ if __name__ == '__main__':
 
     # Initialise intruments
     deca = Decadac_T3('Decadac', 'ASRL1::INSTR', instr_config)
-    lockin_2 = SR830_T3('lockin_2', 'GPIB0::2::INSTR', instr_config)
+#    lockin_2 = SR830_T3('lockin_2', 'GPIB0::2::INSTR', instr_config)
     alazar = AlazarTech_ATS9360_T3('alazar', seq_mode='off')
     ave_ctrl = ATS9360Controller_T3('ave_ctrl', alazar, ctrl_type='ave')
     rec_ctrl = ATS9360Controller_T3('rec_ctrl', alazar, ctrl_type='rec')
@@ -73,15 +72,13 @@ if __name__ == '__main__':
                          address='172.20.10.148',
                          port=7020,
                          axes=['X', 'Y', 'Z'])
-    vna = VNA.ZNB('VNA', 'TCPIP0::192.168.15.103::inst0::INSTR',
-                  init_s_params=False, timeout=40)
-    vna.add_channel('S21')
+    vna = VNA_T3('VNA', 'TCPIP0::192.168.15.103::inst0::INSTR')
     dummy_time = ManualParameter('dummy_time')
 
     # Add instruments to station so that metadata for them is recorded at
     # each measurement and connections are closed at end of session
     STATION.add_component(deca)
-    STATION.add_component(lockin_2)
+#    STATION.add_component(lockin_2)
     STATION.add_component(vna)
     STATION.add_component(mercury)
     STATION.add_component(alazar)
@@ -101,7 +98,7 @@ if __name__ == '__main__':
           'This may take a while...')
     start = time.time()
 
-    lockin_2.acbias()
+#    lockin_2.acbias()
     deca.dcbias.get()
     deca.lcut.get()
     deca.rcut.get()
@@ -136,7 +133,7 @@ if __name__ == '__main__':
     Monitor(mercury.x_fld, mercury.y_fld, mercury.z_fld,
                deca.dcbias, deca.lcut, deca.rcut, deca.jj, deca.rplg,
                deca.lplg,
-               lockin_2.acbias,
+#               lockin_2.acbias,
                samp_ctrl.num_avg, samp_ctrl.int_time, samp_ctrl.int_delay,
                rec_ctrl.num_avg, rec_ctrl.int_time, rec_ctrl.int_delay,
                ave_ctrl.num_avg, ave_ctrl.int_time, ave_ctrl.int_delay,
