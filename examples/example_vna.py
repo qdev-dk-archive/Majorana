@@ -16,8 +16,8 @@ vna.rf_on()
 #%% Do a measurement 
 ### Define parameters for traces:
 
-vna.channels.S21.start(5.38e9)
-vna.channels.S21.stop(5.46e9)
+vna.channels.S21.start(5.2e9)
+vna.channels.S21.stop(5.4e9)
 
 #%%
 #v1.channels.S21.start(5e9)
@@ -38,3 +38,15 @@ do1d(dummy_time, 0, 60, 2, 1, vna.channels.S21.trace)
 #v1.channels.S11.npts(100)
 
 #do1d(deca.rplg, 0, -1, 101, 1,v1.channels.S21.trace)
+
+#%% 
+
+vna.add_spectroscopy_channel('192.168.15.104')
+
+#%%
+vna.readout_freq(5e9)
+vna.readout_power(-50)
+vna.channels.B2G1SAM.trace_mag_phase()
+
+#%%
+do1d(dummy_time, 0, 60, 2, 1, vna.channels.B2G1SAM.trace_mag_phase)

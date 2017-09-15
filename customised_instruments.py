@@ -464,10 +464,15 @@ class AWG5014_T3(Tektronix_AWG5014):
 
 
 class VNA_T3(ZNB):
-    def __init__(self, name, visa_address, init_s_params=False, timeout=40):
-        super().__init__(name, visa_address, init_s_params=init_s_params, timeout=timeout)
-        self.add_channel('S21')
-        self.add_parameter(name='single_S21', get_cmd=self.get_single)
-        self.channels.S21.npts(1)
-    def get_single(self):
+    def __init__(self, name, visa_address, S21=True, spec_mode=False, gen_address=None,
+                 timeout=40):
+        super().__init__(name, visa_address, init_s_params=False, timeout=timeout)
+        if S21:
+            self.add_channel('S21')
+            self.add_parameter(name='single_S21', get_cmd=self._get_single)
+        if spec_mode and gen_address is not None:
+            self.add_spectroscopy_channel(gen_address)
+        elif spec_mode:
+            print('spec mode not added as no generator ip address provided')
+    def _get_single(self):
         return self.channels.S21.trace_mag_phase()[0][0]
