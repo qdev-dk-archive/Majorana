@@ -45,7 +45,7 @@ if __name__ == '__main__':
             pdf_folder=True, analysis_folder=True,
             temp_dict_folder=True, waveforms_folder=True,
             annotate_image=False, mainfolder=None, display_pdf=True,
-            display_individual_pdf=False, qubit_count=1,
+            display_individual_pdf=False, qubit_count=4,
             plot_x_position=0.66)
 
     # Load config from experiment file, if none found then uses one in mainfolder
@@ -54,7 +54,7 @@ if __name__ == '__main__':
     if len(instr_config.sections()) == 0:
         cfg_file = sep.join([CURRENT_EXPERIMENT['mainfolder'], 'instr.config'])
         instr_config = Config(cfg_file, isdefault=True)
-        
+
 
     # Initialise intruments
     deca = Decadac_T3('Decadac', 'ASRL1::INSTR', instr_config)
