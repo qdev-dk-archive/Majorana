@@ -204,6 +204,53 @@ class QDAC_T10(QDac):
                                                          'dc factor topo')))
 
 
+class Decadac_T2(Decadac):
+    def __init__(self, name, address, config, **kwargs):
+        self.config = config
+        deca_physical_min = int(self.config.get('Decadac Range', 'min_volt'))
+        deca_physical_max = int(self.config.get('Decadac Range', 'max_volt'))
+        kwargs.update({'min_val': deca_physical_min,
+                       'max_val': deca_physical_max})
+        super().__init__(name, address, **kwargs)
+
+        labels = config.get('Decadac Channel Labels')
+        for chan, label in labels.items():
+            self.channels[int(chan)].volt.label = label
+
+        # Set up voltage and ramp safetly limits in software
+        ranges = config.get('Decadac Channel Limits')
+        ramp_settings = config.get('Decadac Channel Ramp Setttings')
+
+        for chan in range(20):
+            try:
+                chan_range = ranges[str(chan)]
+            except KeyError:
+                continue
+            range_minmax = chan_range.split(" ")
+            if len(range_minmax) != 2:
+                raise ValueError(
+                    "Expected: min max. Got {}".format(chan_range))
+            else:
+                rangemin = float(range_minmax[0])
+                rangemax = float(range_minmax[1])
+            vldtr = vals.Numbers(rangemin, rangemax)
+            self.channels[chan].volt.set_validator(vldtr)
+
+            try:
+                chan_ramp_settings = ramp_settings[str(chan)]
+            except KeyError:
+                continue
+            ramp_stepdelay = chan_ramp_settings.split(" ")
+            if len(ramp_stepdelay) != 2:
+                raise ValueError(
+                    "Expected: step delay. Got {}".format(chan_ramp_settings))
+            else:
+                step = float(ramp_stepdelay[0])
+                delay = float(ramp_stepdelay[1])
+            self.channels[chan].volt.set_step(step)
+            self.channels[chan].volt.set_delay(delay)
+
+
 class Decadac_T3(Decadac):
     """
     A Decadac with one voltage dividers
