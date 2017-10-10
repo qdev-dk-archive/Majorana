@@ -29,7 +29,7 @@ class Scope_avg(ArrayParameter):
         self.has_setpoints = False
         self.zi = self._instrument
 
-        if not channel in [1, 2]:
+        if channel not in [1, 2]:
             raise ValueError('Channel must be 1 or 2')
 
         self.channel = channel
@@ -464,16 +464,16 @@ class AlazarTech_ATS9360_T3(AlazarTech_ATS9360):
     def _set_seq_mode(self, mode):
         if mode is 'on':
             self.config(sample_rate=self.sample_rate(),
-                          clock_edge=self.clock_edge(),
-                          clock_source=self.clock_source(),
-                          aux_io_mode='AUX_IN_TRIGGER_ENABLE',
-                          aux_io_param='TRIG_SLOPE_POSITIVE')
+                        clock_edge=self.clock_edge(),
+                        clock_source=self.clock_source(),
+                        aux_io_mode='AUX_IN_TRIGGER_ENABLE',
+                        aux_io_param='TRIG_SLOPE_POSITIVE')
         elif mode is 'off':
             self.config(sample_rate=self.sample_rate(),
-                          clock_edge=self.clock_edge(),
-                          clock_source=self.clock_source(),
-                          aux_io_mode='AUX_IN_AUXILIARY',
-                          aux_io_param='NONE')
+                        clock_edge=self.clock_edge(),
+                        clock_source=self.clock_source(),
+                        aux_io_mode='AUX_IN_AUXILIARY',
+                        aux_io_param='NONE')
         else:
             raise ValueError('must set seq mode to "on" or "off"')
 
@@ -498,22 +498,28 @@ class ATS9360Controller_T3(ATS9360Controller):
                          average_records=average_records)
 
 
-class AWG5014_T3(Tektronix_AWG5014):
-    def __init__(self, name, visa_address, **kwargs):
+class AWG5014_T2(Tektronix_AWG5014):
+    def __init__(self, name, visa_address, id_letter='A', **kwargs):
         super().__init__(name, visa_address, **kwargs)
         self.add_parameter(name='current_seq',
                            parameter_class=ManualParameter,
                            initial_value=None,
                            label='Uploaded sequence index',
                            vals=vals.Ints())
+        self.add_parameter(name='id_letter',
+                           parameter_class=ManualParameter,
+                           initial_value=id_letter,
+                           label='AWG id letter',
+                           vals=vals.Strings())
         self.ref_source('EXT')
         self.clear_message_queue()
 
 
 class VNA_T3(ZNB):
-    def __init__(self, name, visa_address, S21=True, spec_mode=False, gen_address=None,
-                 timeout=40):
-        super().__init__(name, visa_address, init_s_params=False, timeout=timeout)
+    def __init__(self, name, visa_address, S21=True, spec_mode=False,
+                 gen_address=None, timeout=40):
+        super().__init__(name, visa_address, init_s_params=False,
+                         timeout=timeout)
         if S21:
             self.add_channel('S21')
             self.add_parameter(name='single_S21', get_cmd=self._get_single)
@@ -521,5 +527,6 @@ class VNA_T3(ZNB):
             self.add_spectroscopy_channel(gen_address)
         elif spec_mode:
             print('spec mode not added as no generator ip address provided')
+
     def _get_single(self):
         return self.channels.S21.trace_mag_phase()[0][0]
