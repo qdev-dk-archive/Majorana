@@ -3,7 +3,8 @@
 import matplotlib.pyplot as plt
 plt.ion()
 
-from pulsed_experiment_simple import ()
+from pulsed_experiment_simple import (makeSimpleSequence, sendSequenceToAWG,
+                                      prepareZIUHFLI, correctMeasTime, Scope_avg)
 
 ###############################################################################
 #                                                                             #
