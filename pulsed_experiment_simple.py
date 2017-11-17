@@ -49,6 +49,7 @@ def makeSimpleSequence(hightime, trig_delay, meastime,
     # dead time for the scope to re-arm its trigger
     bp1.insertSegment(2, 'waituntil', cycletime)
     bp1.marker1 = [(hightime+trig_delay, meastime)]
+    bp1.marker2 = [(hightime+trig_delay, meastime)]
 
     if compensation_ratio != 0:
         # area to compensate for
@@ -61,7 +62,9 @@ def makeSimpleSequence(hightime, trig_delay, meastime,
         # update the marker timing
         bp1.marker1 = [(hightime+trig_delay+compensation_duration,
                         meastime)]
-
+        bp1.marker2 = [(hightime+trig_delay+compensation_duration,
+                        meastime)]
+    
     # In front of the real sequence, we need some dead time to
     # allow the scope to arm its trigger. The problem is that
     # the scope.get is blocking. Luckily, running the AWG is not
@@ -117,42 +120,6 @@ def sendSequenceToAWG(awg, seq):
     package = seq.outputForAWGFile()
     awg.make_send_and_load_awg_file(*package[:])
 
-
-class Scope_avg(ArrayParameter):
-
-    def __init__(self, name, channel=1, **kwargs):
-
-        super().__init__(name, shape=(1,), **kwargs)
-        self.has_setpoints = False
-        self.zi = self._instrument
-
-        if channel not in [1, 2]:
-            raise ValueError('Channel must be 1 or 2')
-
-        self.channel = channel
-
-    def make_setpoints(self):
-        """
-        Makes setpoints and prepares the averager (updates its unit)
-        """
-
-        sp_start = 0
-        sp_stop = self._instrument.scope_duration()
-        sp_npts = self._instrument.scope_length()
-
-        self.shape = (sp_npts,)
-        self.setpoint_labels = ('Time',)
-        self.setpoint_units = ('s',)  #  self._instrument.Scope.units[self.channel-1]
-        self.setpoints = (tuple(np.linspace(sp_start, sp_stop, sp_npts)),)
-        self.has_setpoints = True
-
-    def get_raw(self):
-
-        if not self.has_setpoints:
-            raise ValueError('Setpoints not made. Run make_setpoints')
-
-        data = self._instrument.Scope.get()[self.channel-1]
-        return np.mean(data, 0)
 
 
 def correctMeasTime(meastime, npts):
@@ -214,10 +181,14 @@ def prepareZIUHFLI(zi, demod_freq, pts_per_shot,
 
     # Demodulator
     zi.oscillator1_freq(demod_freq)
-    zi.demod1_order(1)
-    zi.demod1_timeconstant(0.1*meastime)
+    zi.demod1_order(5)
+    zi.demod1_timeconstant(130e-9)
     zi.signal_output1_on('ON')
     # TODO: use this in post-processing to remove first part of demod. data
+
+    # output
+    zi.signal_output1_ampdef('dBm')
+    zi.signal_output1_amplitude(-20)
 
     # Scope
     zi.scope_channel1_input('Demod 1 R')
