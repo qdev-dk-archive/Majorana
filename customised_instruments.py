@@ -33,6 +33,8 @@ class Scope_avg(ArrayParameter):
         self.shape = (sp_npts,)
         self.unit = self._instrument.Scope.units[self.channel-1]
         self.setpoints = (tuple(np.linspace(sp_start, sp_stop, sp_npts)),)
+        self.setpoint_labels = ('Time',)
+        self.setpoint_units = ('s',)
         self.has_setpoints = True
 
     def get(self):
@@ -152,29 +154,33 @@ class QDAC_T10(QDac):
                                       'topo bias channel'))
         topo_channel = self.channels[topo_channel-1].v
 
-        self.add_parameter('current_bias',
-                           label='{} conductance'.format(self.name),
-                           # use lambda for late binding
-                           get_cmd=lambda: self.channels.chan40.v.get()/10E6*1E9,
-                           set_cmd=lambda value: self.channels.chan40.v.set(value*1E-9*10E6),
-                           unit='nA',
-                           get_parser=float)
+#        topo_current_num = int(config.get('Channel Parameters',
+#                                        'topo current channel'))
+#        topo_current = self.channels[topo_current_num-1].v
 
-        # sens_r_channel = int(config.get('Channel Parameters',
+#        self.add_parameter('current_bias',
+#                           label='{} {} conductance'.format(self.name, topo_current_num),
+#                           # use lambda for late binding
+#                           get_cmd=lambda: topo_current.get()/10E6*1E9,
+#                           set_cmd=lambda value: topo_current.set(value*1E-9*10E6),
+#                           unit='nA',
+#                           get_parser=float)
+
+        #sens_r_channel = int(config.get('Channel Parameters',
         #                                'right sensor bias channel'))
-        # sens_r_channel = self.channels[sens_r_channel-1].v
+        #sens_r_channel = self.channels[sens_r_channel-1].v
 
-        # sens_l_channel = int(config.get('Channel Parameters',
+        #sens_l_channel = int(config.get('Channel Parameters',
         #                                 'left sensor bias channel'))
-        # sens_l_channel = self.channels[sens_l_channel-1].v
+        #sens_l_channel = self.channels[sens_l_channel-1].v
 
         self.topo_bias = VoltageDivider(topo_channel,
                                         float(config.get('Gain settings',
                                                          'dc factor topo')))
-        # self.sens_r_bias = VoltageDivider(sens_r_channel,
+        #self.sright_bias = VoltageDivider(sens_r_channel,
         #                                  float(config.get('Gain settings',
         #                                                   'dc factor right')))
-        # self.sens_l_bias = VoltageDivider(sens_l_channel,
+        #self.sleft_bias = VoltageDivider(sens_l_channel,
         #                                  float(config.get('Gain settings',
         #                                                    'dc factor left')))
 

@@ -1,5 +1,6 @@
 import qcodes as qc
 import os
+import sys
 import time
 import logging
 import re
@@ -10,7 +11,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 mpl.rcParams['figure.figsize'] = (8, 3)
 mpl.rcParams['figure.subplot.bottom'] = 0.15 
-mpl.rcParams['font.size'] = 8
+mpl.rcParams['font.size'] = 10
 
 from qcodes.utils.configreader import Config
 from qcodes.utils.wrappers import show_num
@@ -31,10 +32,16 @@ from qcodes.instrument_drivers.devices import VoltageDivider
 import qcodes.instrument_drivers.tektronix.Keithley_2600 as keith
 import qcodes.instrument_drivers.rohde_schwarz.SGS100A as sg
 import qcodes.instrument_drivers.tektronix.AWG5014 as awg
-from modules.pulsebuilding import broadbean as bb
+import broadbean as bb
 from qcodes.instrument_drivers.oxford.mercuryiPS import MercuryiPS
 import qcodes.instrument_drivers.HP .HP8133A as hpsg
 import qcodes.instrument_drivers.rohde_schwarz.ZNB as vna
+
+driverpath = 'A:\qcodes_experiments\modules\Majorana'
+if driverpath not in sys.path:
+    sys.path.append(driverpath)
+
+from AWG570002Adavid import Tektronix_AWG700002A
 
 from qcodes.utils.configreader import Config
 from qcodes.utils.validators import Numbers
@@ -71,7 +78,7 @@ if __name__ == '__main__':
     # Initialisation of intruments
     qdac = QDAC_T10('qdac', 'ASRL8::INSTR', config, update_currents=False)
     lockin_topo = SR830_T10('lockin_topo', 'GPIB10::7::INSTR')
-    lockin_left = SR830_T10('lockin_l', 'GPIB10::10::INSTR')
+#    lockin_left = SR830_T10('lockin_l', 'GPIB10::10::INSTR')
     lockin_right = SR830_T10('lockin_r', 'GPIB10::14::INSTR')
     zi = ZIUHFLI_T10('ziuhfli', 'dev2189')
     keysightgen_left = Keysight_33500B('keysight_gen_left', 'TCPIP0::192.168.15.101::inst0::INSTR')
@@ -81,17 +88,19 @@ if __name__ == '__main__':
     keysightdmm_mid = Keysight_34465A_T10('keysight_dmm_mid', 'TCPIP0::192.168.15.112::inst0::INSTR')
     keysightdmm_bot = Keysight_34465A_T10('keysight_dmm_bot','TCPIP0::192.168.15.113::inst0::INSTR')
     #keithleybot_a = keith.Keithley_2600('keithley_bot','TCPIP0::192.168.15.115::inst0::INSTR',"a")
-    awg1 = awg.Tektronix_AWG5014('AWG1','TCPIP0::192.168.15.105::inst0::INSTR',timeout=40)
-    awg2 = awg.Tektronix_AWG5014('AWG2','TCPIP0::192.168.15.106::inst0::INSTR',timeout=180)
+    awg1 = awg.Tektronix_AWG5014('AWG1','TCPIP0::192.168.15.106::inst0::INSTR',timeout=40)
+    awg2 = awg.Tektronix_AWG5014('AWG2','TCPIP0::192.168.15.105::inst0::INSTR',timeout=40)
+    
     sg1 = sg.RohdeSchwarz_SGS100A("sg1","TCPIP0::192.168.15.107::inst0::INSTR")
     sg1.frequency.set_validator(Numbers(1e5,43.5e9))  # SMF100A can go to 43.5 GHz.
     hpsg1 = hpsg.HP8133A("hpsg1", 'GPIB10::4::INSTR')  
+    #awgtest = Tektronix_AWG700002A("awgtest",'TCPIP0::192.168.15.117::inst0::INSTR')
   #  keysightgen_pulse = Keysight_33500B('keysight_gen_pulse', 'TCPIP0::192.168.15.109::inst0::INSTR')
     mercury = MercuryiPS(name='mercury',
                          address='192.168.15.102',
                          port=7020,
                          axes=['X', 'Y', 'Z'])
-
+#%%
    # v1 = vna.ZNB20('VNA', 'TCPIP0::192.168.15.108::inst0::INSTR')
    # keithleytop=keith.Keithley_2600('keithley_top',
    # 'TCPIP0::192.168.15.116::inst0::INSTR',"a,b")
@@ -100,11 +109,11 @@ if __name__ == '__main__':
           'This may take a while...')
 
     start = time.time()
-    STATION = qc.Station(qdac, lockin_topo, lockin_right, lockin_left,
+    STATION = qc.Station(qdac, lockin_topo, lockin_right,
                          keysightgen_left, keysightgen_mid,# keithleybot_a,
                          keysightdmm_mid, keysightdmm_bot,
                          # keysightdmm_top, keysightdmm_mid, keysightdmm_bot,
-                         awg1, awg2, zi, mercury, sg1, hpsg1)# keysightgen_pulse)
+                        awg1, awg2,zi, mercury, sg1, hpsg1)# keysightgen_pulse)
 
     end = time.time()
     print("Querying took {} s".format(end-start))
@@ -112,7 +121,8 @@ if __name__ == '__main__':
 
     end = time.time()
     print("done Querying all instruments took {}".format(end-start))
-    qc.init("./MajoQubit", "DiamondB", STATION,
+    
+    qc.init("./MajoQubit", " JS_CT_578_Crystal_C_upper_Crystal1", STATION,
             display_pdf=False, display_individual_pdf=False)
     logger = logging.getLogger()
     logger.setLevel(logging.WARNING)
@@ -120,7 +130,7 @@ if __name__ == '__main__':
     config = Config('A:\qcodes_experiments\modules\Majorana\sample.config')
     Config.default = config
 
-    qdac_chans_i = [18,17,8,9,6,5,1,31,46,48,45,42,13]
+    qdac_chans_i = [39,44,40,46,45,18,9,48,10,2,5,6,20,19,23,13]
     qdac_chans = []
     for i in qdac_chans_i:
         qdac_chans.append(qdac.channels[i-1].v)
@@ -140,8 +150,7 @@ if __name__ == '__main__':
 #    zi.demod1_timeconstant(5e-7)
 #    zi.demod5_timeconstant(5e-7)
 #
-    zi.demod1_order(5)
-    zi.demod5_order(5)
+   
 #
     zi.demod1_signalin('Sig In 1')
     zi.demod5_signalin('Sig In 1')

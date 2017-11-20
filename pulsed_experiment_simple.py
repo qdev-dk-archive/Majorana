@@ -7,7 +7,8 @@ ramp = bb.PulseAtoms.ramp
 
 
 def makeSimpleSequence(hightime, trig_delay, meastime,
-                       cycletime, pulsehigh, no_of_avgs, SR,
+                       cycletime, pulsehigh, pulselow,
+                       no_of_avgs, SR,
                        compensation_ratio=0):
     """
     Generate the pulse sequence for the experiment.
@@ -25,6 +26,7 @@ def makeSimpleSequence(hightime, trig_delay, meastime,
         meastime (float): The time of each measurement (s).
         cycletime (float): The time of each pulse-measure cycle (s).
         pulsehigh (float): The amplitude of the pulse (V)
+        pulselow (float): The amplitude during the measurement (V)
         no_of_avgs (int): The number of averages
         SR (int): The AWG sample rate (Sa/s)
         compensation_ratio (float): The time of the compensation pre-pulse
@@ -45,7 +47,8 @@ def makeSimpleSequence(hightime, trig_delay, meastime,
     bp1.setSR(SR)
     bp1.insertSegment(0, ramp, (pulsehigh, pulsehigh),
                       durs=hightime, name=segname)
-    bp1.insertSegment(1, ramp, (0, 0), durs=meastime, name='measure')
+    bp1.insertSegment(1, ramp, (pulselow, pulselow),
+                      durs=meastime, name='measure')
     # dead time for the scope to re-arm its trigger
     bp1.insertSegment(2, 'waituntil', cycletime)
     bp1.marker1 = [(hightime+trig_delay, meastime)]
@@ -53,7 +56,7 @@ def makeSimpleSequence(hightime, trig_delay, meastime,
 
     if compensation_ratio != 0:
         # area to compensate for
-        area = pulsehigh*hightime  # Area of pulse in V*s
+        area = pulsehigh*hightime+pulselow*meastime  # Area of pulse in V*s
         compensation_duration = compensation_ratio*(hightime+meastime)
         compensation_height = -area/compensation_duration
         bp1.insertSegment(0, ramp, (compensation_height, compensation_height),
@@ -163,7 +166,7 @@ def correctMeasTime(meastime, npts):
 
 
 def prepareZIUHFLI(zi, demod_freq, pts_per_shot,
-                   SRstring, no_of_avgs, meastime):
+                   SRstring, no_of_avgs, meastime, outputpwr):
     """
     Prepare the ZI UHF-LI
 
@@ -177,6 +180,7 @@ def prepareZIUHFLI(zi, demod_freq, pts_per_shot,
         no_of_pulses (int): No. of averages, i.e. number
             of scope segments.
         meastime (float): The data acquisition time per point (s)
+        outputpwr (float): The output power of the ZI UHF-LI (dBm)
     """
 
     # Demodulator
@@ -188,8 +192,12 @@ def prepareZIUHFLI(zi, demod_freq, pts_per_shot,
 
     # output
     zi.signal_output1_ampdef('dBm')
-    zi.signal_output1_amplitude(-20)
+    zi.signal_output1_amplitude(outputpwr)
 
+    # input
+    zi.signal_input1_range(30e-3)
+    zi.signal_input2_range(30e-3)
+    
     # Scope
     zi.scope_channel1_input('Demod 1 R')
     zi.scope_channel2_input('Signal Input 2')

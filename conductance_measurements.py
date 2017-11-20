@@ -20,7 +20,8 @@ def do2Dconductance(outer_param: Parameter,
                     inner_stop: Union[float, int],
                     inner_npts: int,
                     lockin: SR830_T10,
-                    delay: Optional[float]=None):
+                    delay: Optional[float]=None,
+                    tasks=None):
     """
     Function to perform a sped-up 2D conductance measurement
 
@@ -106,10 +107,11 @@ def do2Dconductance(outer_param: Parameter,
                                                                  inner_loop,
                                                                  sr.conductance,
                                                                  reset_task)
+                                                                 
 
     set_params = ((inner_param, inner_start, inner_stop),
                   (outer_param, outer_start, outer_stop))
-    meas_params = (sr.conductance,)
+    meas_params = [sr.conductance,]
     prepare_buffer()
     qdac = None
     # ensure that any waveform generator is unbound from the qdac channels that we step if

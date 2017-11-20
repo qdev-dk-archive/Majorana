@@ -148,21 +148,21 @@ def reload_SR830_settings():
 
     lockin_topo = station['lockin_topo']
     lockin_right = station['lockin_r']
-    lockin_left = station['lockin_l']
+#    lockin_left = station['lockin_l']
 
     lockin_topo.acfactor = float(configs.get('Gain settings',
                                              'ac factor topo'))
     lockin_right.acfactor = float(configs.get('Gain settings',
                                               'ac factor right'))
-    lockin_left.acfactor = float(configs.get('Gain settings',
-                                             'ac factor left'))
+   # lockin_left.acfactor = float(configs.get('Gain settings',
+                                           #  'ac factor left'))
 
     lockin_topo.ivgain = float(configs.get('Gain settings',
                                            'iv topo gain'))
     lockin_right.ivgain = float(configs.get('Gain settings',
                                             'iv right gain'))
-    lockin_left.ivgain = float(configs.get('Gain settings',
-                                           'iv left gain'))
+    #lockin_left.ivgain = float(configs.get('Gain settings',
+#                                           'iv left gain'))
 
 
 def reload_QDAC_settings():
