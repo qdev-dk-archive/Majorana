@@ -17,8 +17,8 @@ trig_delay = 0E-6  # delay between the end of the pulse and the measurement trig
 meastime = 1400e-6  # desired time the measurement, i.e. scope shot, should last (see note below)
 cycletime = hightime + meastime + 1500e-6  # Time of one pulse-measure cycle. Repeated no_of_avgs times
 no_of_avgs = 100  # number of averages
-pulsehigh =8E-3  # Voltage level of the pulse
-pulselow = -8E-3
+pulsehigh = -16E-3  # Voltage level of the pulse
+pulselow = 0E-3
 SR = 1e9  # sample rate of the AWG/Pulse
 npts = 4096  # number of points in the scope trace (min.: 4096)
 demod_freq = 247e6  # demodulation frequency (Hz)
@@ -76,7 +76,7 @@ try:
         
     resetTask = qc.Task(make_things_right)
         
-    do1d(qdac.ch48.v, -2.503, -2.497, 120, 1, zi.scope_avg_ch1, resetTask)
+    do1d(qdac.ch48.v, -2.497, -2.503, 120, 1, zi.scope_avg_ch1, resetTask)
 finally:
     # remove the post trigger again
     zi.Scope._scopeactions = []
