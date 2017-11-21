@@ -132,8 +132,7 @@ def fast_charge_diagram(keysight_channel, fast_v_start, fast_v_stop, n_averages,
         keysight.ch1_offset(key_offset)
         keysight.ch1_frequency(key_frequency)
         keysight.sync_source(1)
-        keysight.ch1_output('ON')
-        
+        keysight.ch1_output('ON') 
         #KDP setup Ch2 for compensating sensor
         # Channels should be coupled, ch 2 output inverted
         keysight.ch2_function_type('RAMP')
@@ -141,19 +140,20 @@ def fast_charge_diagram(keysight_channel, fast_v_start, fast_v_stop, n_averages,
         keysight.ch2_phase(180*(1+asym))
         keysight.ch2_amplitude_unit('VPP')
         keysight.ch2_amplitude(keysight_amplitude*comp_scale)
+        keysight.ch2_frequency(key_frequency)
         keysight.ch2_output('ON')
         keysight.sync_phase()
-        
     elif keysight_channel == 'ch02':
-        keysight.ch2_function_type('RAMP')
-        keysight.ch2_ramp_symmetry(100*(1-asym))
-        keysight.ch2_phase(180*(1+asym))
-        keysight.ch2_amplitude_unit('VPP')
-        keysight.ch2_amplitude(keysight_amplitude)
-        keysight.ch2_offset(key_offset)
-        keysight.ch2_frequency(key_frequency)
-        keysight.sync_source(2)
-        keysight.ch2_output('ON')
+        # keysight.ch2_function_type('RAMP')
+        # keysight.ch2_ramp_symmetry(100*(1-asym))
+        # keysight.ch2_phase(180*(1+asym))
+        # keysight.ch2_amplitude_unit('VPP')
+        # keysight.ch2_amplitude(keysight_amplitude)
+        # keysight.ch2_offset(key_offset)
+        # keysight.ch2_frequency(key_frequency)
+        # keysight.sync_source(2)
+        # keysight.ch2_output('ON')
+        pass
     else:
         raise ValueError('Select a valid Keysight channel.')
 
