@@ -189,7 +189,7 @@ def prepareZIUHFLI(zi, demod_freq, pts_per_shot,
     # Demodulator
     zi.oscillator1_freq(demod_freq)
     zi.demod1_order(5)
-    zi.demod1_timeconstant(130e-9)
+    zi.demod1_timeconstant(1e-6)
     zi.signal_output1_on('ON')
     # TODO: use this in post-processing to remove first part of demod. data
 
