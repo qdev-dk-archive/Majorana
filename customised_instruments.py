@@ -11,7 +11,8 @@ from qcodes.instrument_drivers.stanford_research.SR830 import ChannelBuffer
 from qcodes.instrument_drivers.Keysight.Keysight_34465A import Keysight_34465A
 from qcodes.instrument_drivers.devices import VoltageDivider
 from qcodes.instrument_drivers.ZI.ZIUHFLI import ZIUHFLI
-from qcodes import ArrayParameter
+from qcodes import ArrayParameter, Parameter
+
 
 class Scope_avg(ArrayParameter):
 
@@ -55,6 +56,30 @@ class Scope_avg(ArrayParameter):
             data_ret = data_avg
 
         return data_ret
+
+
+class Scope_full_avg(Parameter):
+    """
+    Parameter class to return the fully averaged value of N scope
+    segments, i.e., N segments averaged together to a single point
+    """
+
+    def __init__(self, name, instrument, channel, **kwargs):
+        super().__init__(name, instrument, **kwargs)
+
+        if channel not in [1, 2]:
+            raise ValueError('Channel must be 1 or 2')
+
+        self.channel = channel
+        self.label = self.zi.parameters['scope_channel{}_input'.format(self.channel)].get()
+
+    def get_raw(self):
+
+        data = self._instrument.Scope.get()[self.channel-1]
+        data_avg = np.mean(data)
+
+        return data_avg
+
 
 # A conductance buffer, needed for the faster 2D conductance measurements
 # (Dave Wecker style)
@@ -210,6 +235,7 @@ class Keysight_34465A_T10(Keysight_34465A):
         """
         return self.volt()/self.iv_conv*1E12
 
+
 class ZIUHFLI_T10(ZIUHFLI):
 
     def __init__(self, name, address, **kwargs):
@@ -223,3 +249,11 @@ class ZIUHFLI_T10(ZIUHFLI):
                            channel=2,
                            label='',
                            parameter_class=Scope_avg)
+
+        self.add_parameter('scope_full_avg_ch1',
+                           channel=1,
+                           parameter_class=Scope_full_avg)
+
+        self.add_parameter('scope_full_avg_ch2',
+                           channel=2,
+                           parameter_class=Scope_full_avg)
