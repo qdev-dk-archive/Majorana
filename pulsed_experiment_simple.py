@@ -67,7 +67,7 @@ def makeSimpleSequence(hightime, trig_delay, meastime,
                         meastime)]
         bp1.marker2 = [(hightime+trig_delay+compensation_duration,
                         meastime)]
-    
+
     # In front of the real sequence, we need some dead time to
     # allow the scope to arm its trigger. The problem is that
     # the scope.get is blocking. Luckily, running the AWG is not
@@ -166,7 +166,8 @@ def correctMeasTime(meastime, npts):
 
 
 def prepareZIUHFLI(zi, demod_freq, pts_per_shot,
-                   SRstring, no_of_avgs, meastime, outputpwr):
+                   SRstring, no_of_avgs, meastime, outputpwr,
+                   single_channel=False):
     """
     Prepare the ZI UHF-LI
 
@@ -181,6 +182,8 @@ def prepareZIUHFLI(zi, demod_freq, pts_per_shot,
             of scope segments.
         meastime (float): The data acquisition time per point (s)
         outputpwr (float): The output power of the ZI UHF-LI (dBm)
+        single_channel (bool): Whether to subscribe the scope to just a
+            single channel. If true, channel 1 will be used. Default: False.
     """
 
     # Demodulator
@@ -197,14 +200,17 @@ def prepareZIUHFLI(zi, demod_freq, pts_per_shot,
     # input
     zi.signal_input1_range(30e-3)
     zi.signal_input2_range(30e-3)
-    
+
     # Scope
     zi.scope_channel1_input('Demod 1 R')
     zi.scope_channel2_input('Signal Input 2')
     zi.scope_mode('Time Domain')
     zi.scope_samplingrate(SRstring)
     zi.scope_length(pts_per_shot)
-    zi.scope_channels(3)
+    if single_channel:
+        zi.scope_channels(1)
+    else:
+        zi.scope_channels(3)
     #
     zi.scope_trig_enable('ON')
     # trigger delay reference point: at trigger event time
