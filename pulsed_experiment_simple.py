@@ -165,6 +165,90 @@ def correctMeasTime(meastime, npts):
     return newtime, SRstring
 
 
+def makeT2Sequence(hightimes, trig_delay, meastime,
+                   cycletime, pulsehigh, pulselow,
+                   no_of_avgs, SR):
+    """
+    Generate the pulse sequence for the experiment.
+    The sequence consists of three parts:
+    1: A wait with zeros allowing the ZI to get ready. This part is
+    short, but repeated waitbits times
+    2: A short zero part with the marker2 trigger for the ramp
+    3: The high pulse and a marker1 trigger for the ZI
+    Args:
+        hightimes (iterables): The widths of the pulse (s)
+        trig_delay (float): The delay to start measuring after the end of the
+            pulse (s).
+        meastime (float): The time of each measurement (s).
+        cycletime (float): The time of each pulse-measure cycle (s).
+        pulsehigh (float): The amplitude of the pulse (V)
+        pulselow (float): The amplitude during the measurement (V)
+        no_of_avgs (int): The number of averages
+        SR (int): The AWG sample rate (Sa/s)
+    """
+
+    segname = 'high'
+
+
+    ##################################################################
+    # The pulsed part
+
+    bp1 = bb.BluePrint()
+    bp1.setSR(SR)
+    bp1.insertSegment(0, ramp, (pulsehigh, pulsehigh),
+                      durs=hightimes[0], name=segname)
+    bp1.insertSegment(1, ramp, (pulselow, pulselow),
+                      durs=meastime, name='measure')
+    # dead time for the scope to re-arm its trigger
+    bp1.insertSegment(2, 'waituntil', cycletime)
+
+    bp1.setSegmentMarker('measure', (trig_delay, meastime), 1)  # segment name, (delay, duration), markerID
+    bp1.setSegmentMarker('measure', (trig_delay, meastime), 2)  # segment name, (delay, duration), markerID
+
+    baseelem = bb.Element()
+    baseelem.addBluePrint(1, bp1)
+
+    # now generate the varying sequence
+    channels = [1]
+    names = [segname]
+    args = ['duration']
+    iters = [hightimes]
+
+    mainseq = bb.makeVaryingSequence(baseelem, channels, names, args, iters)
+
+    mainseq.setSR(SR)
+
+    # In front of the real sequences, we have the master rerouter element
+    #
+
+    masterbp = bb.BluePrint()
+    # to avoid using the software sequencer, we need each segment to have
+    # at least N points
+    masterbp.insertSegment(0, ramp, (0, 0), durs=1000*1/SR)
+    masterbp.setSR(SR)
+
+    masterelem = bb.Element()
+    masterelem.addBluePrint(1, masterbp)
+
+    masterseq = bb.Sequence()
+    masterseq.addElement(1, masterelem)
+    masterseq.setSR(SR)
+
+    seq = masterseq + mainseq
+
+    # now set correct sequencing
+    for ii in range(mainseq.length_sequenceelements):
+        seq.setSequenceSettings(ii+2, 0, no_of_avgs, 0, 1)
+
+    seq.setSequenceSettings(1, 1, 1, 0, 2)  # this number, 2, will be changed in the loop
+
+    # NB: We have not specified voltage ranges yet
+    # this will be done when the uploading is to happen
+
+    return seq
+
+
+
 def prepareZIUHFLI(zi, demod_freq, pts_per_shot,
                    SRstring, no_of_avgs, meastime, outputpwr,
                    single_channel=False):
