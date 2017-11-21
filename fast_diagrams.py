@@ -138,6 +138,7 @@ def fast_charge_diagram(keysight_channel, fast_v_start, fast_v_stop, n_averages,
         keysight.ch2_function_type('RAMP')
         keysight.ch2_ramp_symmetry(100*(1-asym))
         keysight.ch2_phase(180*(1+asym))
+        keysight.ch2_output_polarity('INV')
         keysight.ch2_amplitude_unit('VPP')
         keysight.ch2_amplitude(keysight_amplitude*comp_scale)
         keysight.ch2_frequency(key_frequency)

@@ -71,7 +71,7 @@ class Scope_full_avg(Parameter):
             raise ValueError('Channel must be 1 or 2')
 
         self.channel = channel
-        self.label = self.zi.parameters['scope_channel{}_input'.format(self.channel)].get()
+        self.label = instrument.parameters['scope_channel{}_input'.format(self.channel)].get()
 
     def get_raw(self):
 
