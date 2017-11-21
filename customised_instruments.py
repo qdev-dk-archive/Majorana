@@ -36,6 +36,7 @@ class Scope_avg(ArrayParameter):
         self.setpoint_labels = ('Time',)
         self.setpoint_units = ('s',)
         self.has_setpoints = True
+        self.label = self.zi.parameters['scope_channel{}_input'.format(self.channel)].get()
 
     def get(self):
 

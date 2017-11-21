@@ -12,13 +12,13 @@ from pulsed_experiment_simple import (makeSimpleSequence, sendSequenceToAWG,
 #                                                                             #
 ###############################################################################
 
-hightime = 400e-6  # time the pulse is high/ON
+hightime = 250e-6  # time the pulse is high/ON
 trig_delay = 0E-6  # delay between the end of the pulse and the measurement trigger
-meastime = 3000e-6  # desired time the measurement, i.e. scope shot, should last (see note below)
-cycletime = hightime + meastime + 2000e-6  # Time of one pulse-measure cycle. Repeated no_of_avgs times
-no_of_avgs = 300  # number of averages
-pulsehigh =5E-3  # Voltage level of the pulse
-pulselow = -5E-3
+meastime = 1400e-6  # desired time the measurement, i.e. scope shot, should last (see note below)
+cycletime = hightime + meastime + 1500e-6  # Time of one pulse-measure cycle. Repeated no_of_avgs times
+no_of_avgs = 100  # number of averages
+pulsehigh =8E-3  # Voltage level of the pulse
+pulselow = -8E-3
 SR = 1e9  # sample rate of the AWG/Pulse
 npts = 4096  # number of points in the scope trace (min.: 4096)
 demod_freq = 247e6  # demodulation frequency (Hz)
@@ -76,7 +76,7 @@ try:
         
     resetTask = qc.Task(make_things_right)
         
-    do1d(qdac.ch48.v, -2.566, -2.561, 100, 1, zi.scope_avg_ch1, resetTask)
+    do1d(qdac.ch48.v, -2.503, -2.497, 120, 1, zi.scope_avg_ch1, resetTask)
 finally:
     # remove the post trigger again
     zi.Scope._scopeactions = []
