@@ -75,6 +75,7 @@ class Scope_full_avg(Parameter):
 
     def get_raw(self):
 
+        self.label = self._instrument.parameters['scope_channel{}_input'.format(self.channel)].get()
         data = self._instrument.Scope.get()[self.channel-1]
         data_avg = np.mean(data)
 
