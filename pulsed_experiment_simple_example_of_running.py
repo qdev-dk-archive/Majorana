@@ -1,5 +1,5 @@
 # an example of how to run the simple pulsed experiment
-
+import time
 import matplotlib.pyplot as plt
 plt.ion()
 
@@ -67,7 +67,12 @@ awg1.ch1_state(1)
 prepareZIUHFLI(zi, demod_freq, npts, SRstring, no_of_avgs, meastime, outputpwr)
 zi.Scope.prepare_scope()
 zi.scope_avg_ch1.make_setpoints(0, meastime, npts)
-zi.Scope.add_post_trigger_action(awg1.run) # make the awg run after arming the scope trigger
+def run_awg():
+    while awg1.state() == 'Running':
+        time.sleep(10e-3)
+    awg1.run()
+
+zi.Scope.add_post_trigger_action(run_awg) # make the awg run after arming the scope trigger
 #%%
 ###############################################################################
 #                                                                             #
@@ -81,8 +86,10 @@ try:
         zi.Scope.prepare_scope()
         
     resetTask = qc.Task(make_things_right)
+
         
     do1d(qdac_channel, qdac_start, qdac_stop, qdac_pnts, 1, zi.scope_avg_ch1, resetTask)
+
 finally:
     # remove the post trigger again
     zi.Scope._scopeactions = []

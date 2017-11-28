@@ -14,7 +14,7 @@ mpl.rcParams['figure.subplot.bottom'] = 0.15
 mpl.rcParams['font.size'] = 10
 
 from qcodes.utils.configreader import Config
-from qcodes.utils.wrappers import show_num
+from qcodes.utils.wrappers import show_num, init_python_logger
 
 from majorana_wrappers import *
 from reload_settings import *
@@ -57,7 +57,7 @@ from fast_diagrams import fast_charge_diagram
 if __name__ == '__main__':
 
     #logging.basicConfig(filename=os.path.join(os.getcwd(), 'pythonlog.txt'), level=logging.DEBUG)
-
+    init_python_logger()
     init_log = logging.getLogger(__name__)
 
     # import T10_setup as t10
