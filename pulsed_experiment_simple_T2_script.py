@@ -11,17 +11,17 @@ from pulsed_experiment_simple import (makeT2Sequence, sendSequenceToAWG,
 #                                                                             #
 ###############################################################################
 
-hightimes = np.linspace(15e-6, 35e-6, 5)  # time the pulse is high/ON
+hightimes = np.linspace(1e-9, 3e-9, 10)  # time the pulse is high/ON
 trig_delay = 0e-6  # delay between the end of the pulse and the measurement trigger
-meastime = 400e-6  # desired time the measurement, i.e. scope shot, should last (see note below)
+meastime = 60e-6  # desired time the measurement, i.e. scope shot, should last (see note below)
 cycletime = meastime + 550e-6  # Time of one pulse-measure cycle. Repeated no_of_avgs times
-no_of_avgs = 1000  # number of averages
-pulsehigh = 100e-3  # Voltage level of the pulse
+no_of_avgs = 50  # number of averages
+pulsehigh = 10e-3  # Voltage level of the pulse
 pulselow = 0
-SR = 1.2e9  # sample rate of the AWG/Pulse
+SR = 1e9  # sample rate of the AWG/Pulse
 npts = 4096  # number of points in the scope trace (min.: 4096)
-demod_freq = 2e6  # demodulation frequency (Hz)
-outputpwr = -50
+demod_freq = 246e6  # demodulation frequency (Hz)
+outputpwr = -53
 single_channel = True  # whether to only use a single scope channel
 
 ###############################################################################
@@ -35,7 +35,6 @@ qdac = station['qdac']
 awg = station['AWG1']
 zi = station['ziuhfli']
 awg.clock_freq(SR)
-
 
 # NOTE: we can't have any measurement time we want, since
 # there is only a fixed number of available sample rates
@@ -52,7 +51,7 @@ seq = makeT2Sequence(hightimes, trig_delay, meastime,
                      cycletime, pulsehigh, pulselow,
                      no_of_avgs, SR)
 
-seq.plotSequence()
+# seq.plotSequence()
 
 #%%
 
@@ -64,7 +63,7 @@ prepareZIUHFLI(zi, demod_freq, npts, SRstring, no_of_avgs,
                meastime, outputpwr, single_channel=single_channel)
 zi.Scope.prepare_scope()
 
-awg.ch1_m1_high(1.5)
+awg.ch1_m1_high(2.3)
 zi.Scope.add_post_trigger_action(awg.force_trigger)
 
 #%%
@@ -109,7 +108,6 @@ def make_things_right():
                    outputpwr, single_channel=single_channel)
     zi.Scope.prepare_scope()
 
-
 resetTask = qc.Task(make_things_right)
 make_things_right()
 awg.ch1_state(1)
@@ -120,16 +118,16 @@ p2 = hightimes[-1]
 num = len(hightimes)
 
 try:
-    innerloop = qc.Loop(step_param.sweep(p1, p2, num=num), delay=0.01).each(zi.scope_full_avg_ch1,
-                                                                            resetTask)
-    outerloop = qc.Loop(qdac.ch01.v.sweep(0, 1, num=25), delay=1).each(innerloop)
-    data = outerloop.get_data_set(name='testsweep')
-    plot = qc.QtPlot()
-    plot.add(data.arrays['uhf-li_scope_full_avg_ch1'])  # add a graph to the plot
-    _ = outerloop.with_bg_task(plot.update, plot.save).run()  # run the loop
+    #innerloop = qc.Loop(step_param.sweep(p1, p2, num=num), delay=0.01).each(zi.scope_full_avg_ch1,
+                                                               #             resetTask)
+    #outerloop = qc.Loop(qdac.ch48.v.sweep(-2.658, -2.64, num=50), delay=1).each(innerloop)
+    #data = outerloop.get_data_set(name='testsweep')
+    #plot = qc.QtPlot()
+    #plot.add(data.arrays['ziuhfli_scope_full_avg_ch1'])  # add a graph to the plot
+    #_ = outerloop.with_bg_task(plot.update, plot.save).run()  # run the loop
 
     # I think the above will become
-    #do2d(qdac.ch01.v, 0, 1, 25, 1, step_param, p1, p2, num, zi.scope_full_avg_ch1, resetTask)
+    do2d(qdac.ch48.v, -1.98, -1.975, 10, 1, step_param, p1, p2, num, 100e-6, zi.scope_full_avg_ch1, resetTask)
 
 finally:
     awg.set_sqel_goto_target_index(1, 2)
