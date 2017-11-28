@@ -12,18 +12,24 @@ from pulsed_experiment_simple import (makeSimpleSequence, sendSequenceToAWG,
 #                                                                             #
 ###############################################################################
 
-hightime = 500e-6  # time the pulse is high/ON
+hightime = 100e-6  # time the pulse is high/ON
 trig_delay = 0E-6  # delay between the end of the pulse and the measurement trigger
-meastime = 1200e-6  # desired time the measurement, i.e. scope shot, should last (see note below)
+meastime = 200e-6  # desired time the measurement, i.e. scope shot, should last (see note below)
 cycletime = hightime + meastime + 1500e-6  # Time of one pulse-measure cycle. Repeated no_of_avgs times
-no_of_avgs = 100  # number of averages
-pulsehigh = 12E-3  # Voltage level of the pulse
+no_of_avgs = 300  # number of averages
+pulsehigh = -7E-3  # Voltage level of the pulse
 pulselow = 0E-3
 SR = 1e9  # sample rate of the AWG/Pulse
 npts = 4096  # number of points in the scope trace (min.: 4096)
 demod_freq = 247e6  # demodulation frequency (Hz)
 compensation_ratio = 0  # the compensation pusle time ratio
-outputpwr = -53  # the UHF-LI output power (dBm)
+outputpwr = -56  # the UHF-LI output power (dBm)
+
+
+qdac_channel = qdac.ch48.v
+qdac_start = -2.164
+qdac_stop = -2.158
+qdac_pnts = 80
 
 # NOTE: we can't have any measurement time we want, since
 # there is only a fixed number of available sample rates
@@ -76,7 +82,7 @@ try:
         
     resetTask = qc.Task(make_things_right)
         
-    do1d(qdac.ch48.v, -2.643, -2.653, 100, 1, zi.scope_avg_ch1, resetTask)
+    do1d(qdac_channel, qdac_start, qdac_stop, qdac_pnts, 1, zi.scope_avg_ch1, resetTask)
 finally:
     # remove the post trigger again
     zi.Scope._scopeactions = []

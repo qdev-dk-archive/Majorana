@@ -108,6 +108,7 @@ def make_things_right():
                    outputpwr, single_channel=single_channel)
     zi.Scope.prepare_scope()
 
+
 resetTask = qc.Task(make_things_right)
 make_things_right()
 awg.ch1_state(1)
