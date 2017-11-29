@@ -111,7 +111,7 @@ def makeSimpleSequence(hightime, trig_delay, meastime,
     return seq
 
 
-def makeT1Sequence(hightime, trig_delay, meastime,
+def makeT1Sequence(hightime, trig_delay, RF_delay, meastime,
                    cycletime, pulsehigh, pulselow,
                    no_of_avgs, SR,
                    compensation_ratio=0):
@@ -128,6 +128,7 @@ def makeT1Sequence(hightime, trig_delay, meastime,
         hightime (float): The width of the pulse (s)p
         trig_delay (float): The delay to start measuring after the end of the
             pulse (s).
+        RF_delay (float): The delay of marker1 relatively to the pulse switch off
         meastime (float): The time of each measurement (s).
         cycletime (float): The time of each pulse-measure cycle (s).
         pulsehigh (float): The amplitude of the pulse (V)
@@ -152,7 +153,7 @@ def makeT1Sequence(hightime, trig_delay, meastime,
                       durs=meastime, name='measure')
     # dead time for the scope to re-arm its trigger
     bp1.insertSegment(2, 'waituntil', cycletime)
-    bp1.marker1 = [(hightime+trig_delay, meastime)]
+    bp1.marker1 = [(hightime+RF_delay, meastime)]
     bp1.marker2 = [(hightime+trig_delay, meastime)]
 
     if compensation_ratio != 0:
@@ -164,7 +165,7 @@ def makeT1Sequence(hightime, trig_delay, meastime,
                           durs=compensation_duration)
 
         # update the marker timing
-        bp1.marker1 = [(hightime+trig_delay+compensation_duration,
+        bp1.marker1 = [(hightime+RF_delay+compensation_duration,
                         meastime)]
         bp1.marker2 = [(hightime+trig_delay+compensation_duration,
                         meastime)]
@@ -259,7 +260,7 @@ def correctMeasTime(meastime, npts):
     return newtime, SRstring
 
 
-def makeT2Sequence(hightimes, trig_delay, meastime,
+def makeT2Sequence(hightimes, trig_delay, RF_delay, meastime,
                        cycletime, pulsehigh, pulselow,
                        no_of_avgs, SR):
     """
@@ -303,7 +304,8 @@ def makeT2Sequence(hightimes, trig_delay, meastime,
     # dead time for the scope to re-arm its trigger
     bp1.insertSegment(2, 'waituntil', cycletime)
 
-    bp1.setSegmentMarker(segname, (trig_delay, meastime), 1)  # segment name, (delay, duration), markerID
+    bp1.setSegmentMarker(segname, (RF_delay, meastime), 1)  # segment name, (delay, duration), markerID
+    bp1.setSegmentMarker(segname, (trig_delay, meastime), 2)
 
     pulseelem = bb.Element()
     pulseelem.addBluePrint(1, bp1)
@@ -345,8 +347,8 @@ def prepareZIUHFLI(zi, demod_freq, pts_per_shot,
 
     # Demodulator
     zi.oscillator1_freq(demod_freq)
-    zi.demod1_order(5)
-    zi.demod1_timeconstant(1e-6)
+    zi.demod1_order(1)
+    zi.demod1_timeconstant(100e-9)
     zi.signal_output1_on('ON')
     # TODO: use this in post-processing to remove first part of demod. data
 
@@ -396,8 +398,8 @@ def prepareZIUHFLIForAlazar(zi, demod_freq, outputpwr, signalscaling):
 
     # Demodulator
     zi.oscillator1_freq(demod_freq)
-    zi.demod1_order(5)
-    zi.demod1_timeconstant(1e-6)
+    zi.demod1_order(1)
+    zi.demod1_timeconstant(100e-9)
     zi.signal_output1_on('ON')
     # TODO: use this in post-processing to remove first part of demod. data
 
@@ -422,6 +424,8 @@ def setupAlazarForT1(alazar, sampling_rate):
     # Configure all settings in the Alazar card
     alazar.config(clock_source='INTERNAL_CLOCK',
                   sample_rate=sampling_rate,
+                  #clock_source='EXTERNAL_CLOCK_10MHz_REF',
+                  #external_sample_rate=sampling_rate,
                   clock_edge='CLOCK_EDGE_RISING',
                   decimation=1,
                   coupling=['DC','DC'],
@@ -449,6 +453,8 @@ def setupAlazarForT2(alazar, sampling_rate):
     # Configure all settings in the Alazar card
     alazar.config(clock_source='INTERNAL_CLOCK',
                   sample_rate=sampling_rate,
+                  #clock_source='EXTERNAL_CLOCK_10MHz_REF',
+                  #external_sample_rate=sampling_rate,
                   clock_edge='CLOCK_EDGE_RISING',
                   decimation=1,
                   coupling=['DC','DC'],
