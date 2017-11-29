@@ -22,19 +22,19 @@ from alazar_controllers.alazar_channel import AlazarChannel
 #                                                                             #
 ###############################################################################
 
-
-hightimes = np.linspace(2e-9, 100e-9, 25)  # times the pulse is high/ON
-trig_delay = 0e6  # delay between the end of the pulse and the measurement trigger
-meastime = 10e-6  # desired time the measurement, i.e. scope shot, should last (see note below)
-extra_wait_time = 100e-6
-no_of_avgs = 1000  # number of averages
-pulsehigh =200E-3  # Voltage level of the pulse
+hightimes = np.linspace(1e-9, 50e-6, 100)  # times the pulse is high/ON
+trig_delay = 0E-6 #delay between the end of the pulse and the measurement trigger
+RF_delay = 0E-6
+meastime = 1e-6 # desired time the measurement, i.e. scope shot, should last (see note below)
+extra_wait_time = 20e-6
+no_of_avgs = 2000  # number of averages
+pulsehigh =6E-3  # Voltage level of the pulse
 pulselow = 0E-3
 SR = 1e9  # sample rate of the AWG/Pulse
-demod_freq = 1e6#247e6  # demodulation frequency (Hz)
+demod_freq = 247e6  # demodulation frequency (Hz)
 compensation_ratio = 0  # the compensation pusle time ratio
-outputpwr = -53  # the UHF-LI output power (dBm)
-signalscaling = 50
+outputpwr = -15  # the UHF-LI output power (dBm)
+signalscaling = 20000
 
 alazar_sampling_rate = 1_000_000_000
 
@@ -72,7 +72,7 @@ chan1.num_averages(no_of_avgs)
  
 awg1.clock_freq(SR)
 # make sequence
-seq = makeT2Sequence(hightimes, trig_delay, meastime,
+seq = makeT2Sequence(hightimes, trig_delay, RF_delay, meastime,
                      cycletime, pulsehigh, pulselow,
                      no_of_avgs, SR)
 #seq.plotSequence()
@@ -83,8 +83,8 @@ sendSequenceToAWG(awg1, seq)
 # switch on channel 1
 awg1.ch1_state(1)
 # set the markers corectly
-awg1.ch1_m2_high(2.7)
-awg1.ch1_m1_high(2.7)
+awg1.ch1_m1_high(2.6)
+awg1.ch1_m2_high(2.6)
 #%%
 # prepare the scope on the ZI UHF-LI and the QCoDeS parameters
 # holding the scope data
@@ -94,7 +94,7 @@ prepareZIUHFLIForAlazar(zi, demod_freq, outputpwr, signalscaling)
 # define functions for running the awg with a hook from within the alazar
 def run_awg():
     while awg1.state() == 'Running':
-        time.sleep(10e-3)
+        time.sleep(50e-3)
     awg1.run()
 
 def dummy_func():
@@ -115,10 +115,9 @@ start_width = hightimes[0]
 stop_width = hightimes[-1]
 no_of_widths = len(hightimes)
 
-nsteps = 5
+nsteps = 150
 
-
-av = AlazarValues('alazar_values', alazarcontroller, chan1, save_raw_data=True)
+av = AlazarValues('alazar_values', alazarcontroller, chan1, save_raw_data=False)
 av.prepare_alazar_values(hightimes)
 
 try:
@@ -127,9 +126,11 @@ try:
 #    sweep= keysightgen_left.ch1_frequency.sweep(1e3, 2e3, num=nsteps)
 #    loop = qc.Loop(sweep, 0.01).each(av)
 #    data = loop.run()
-    plot, data = do1d(keysightgen_left.ch1_frequency, 1e3, 2e3, nsteps, 0.01, av)
+    nsteps = 200
+    plot, data = do1d(qdac.ch48.v, -2.206, -2.2, nsteps, 0.001, av)
 finally:
     # remove the post trigger again
     alazarcontroller.pre_acquire = dummy_func
     zi.signal_output1_on('OFF')
     av._rawdatacounter = 0
+    awg1.all_channels_off()
