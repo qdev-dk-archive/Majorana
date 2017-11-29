@@ -29,6 +29,7 @@ from qcodes.instrument_drivers.Keysight.Keysight_34465A import Keysight_34465A
 from qcodes.instrument_drivers.ZI.ZIUHFLI import ZIUHFLI
 from qcodes.instrument_drivers.devices import VoltageDivider
 
+import qcodes.instrument_drivers.AlazarTech.ATS9360 as ATSdriver
 import qcodes.instrument_drivers.tektronix.Keithley_2600 as keith
 import qcodes.instrument_drivers.rohde_schwarz.SGS100A as sg
 import qcodes.instrument_drivers.tektronix.AWG5014 as awg
@@ -42,6 +43,7 @@ if driverpath not in sys.path:
     sys.path.append(driverpath)
 
 from AWG570002Adavid import Tektronix_AWG700002A
+from alazar_controllers.ATSChannelController import ATSChannelController
 
 from qcodes.utils.configreader import Config
 from qcodes.utils.validators import Numbers
@@ -76,6 +78,9 @@ if __name__ == '__main__':
         close_station(qc.Station.default)
 
     # Initialisation of intruments
+    alazar = ATSdriver.AlazarTech_ATS9360(name='alazar')
+    alazarcontroller = ATSChannelController(name='alazarcontroller',
+                                            alazar_name='alazar')
     qdac = QDAC_T10('qdac', 'ASRL8::INSTR', config, update_currents=False)
     lockin_topo = SR830_T10('lockin_topo', 'GPIB10::7::INSTR')
 #    lockin_left = SR830_T10('lockin_l', 'GPIB10::10::INSTR')
@@ -113,7 +118,8 @@ if __name__ == '__main__':
                          keysightgen_left, keysightgen_mid,# keithleybot_a,
                          keysightdmm_mid, keysightdmm_bot,
                          # keysightdmm_top, keysightdmm_mid, keysightdmm_bot,
-                        awg1, awg2,zi, mercury, sg1, hpsg1)# keysightgen_pulse)
+                        awg1, awg2,zi, mercury, sg1, hpsg1,
+                        alazar, alazarcontroller)# keysightgen_pulse)
 
     end = time.time()
     print("Querying took {} s".format(end-start))
@@ -124,8 +130,6 @@ if __name__ == '__main__':
     
     qc.init("./MajoQubit", " JS_CT_578_Crystal_C_upper_Crystal1", STATION,
             display_pdf=False, display_individual_pdf=False)
-    logger = logging.getLogger()
-    logger.setLevel(logging.WARNING)
 
     config = Config('A:\qcodes_experiments\modules\Majorana\sample.config')
     Config.default = config
