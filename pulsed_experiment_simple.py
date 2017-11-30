@@ -529,7 +529,7 @@ class AlazarValues(ArrayParameter):
         rawdataset.formatter.number_format = '{:g}'
         rawdataset.formatter.extension = '.raw'
         rawdataset.finalize(filename=name, write_metadata=False)
-        print('Wrote rawdata to {}'.format(rawdataset.location))
+       # print('Wrote rawdata to {}'.format(rawdataset.location))
 
     def get_raw(self):
         

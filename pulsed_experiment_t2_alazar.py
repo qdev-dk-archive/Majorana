@@ -22,12 +22,12 @@ from alazar_controllers.alazar_channel import AlazarChannel
 #                                                                             #
 ###############################################################################
 
-hightimes = np.linspace(1e-9, 50e-6, 100)  # times the pulse is high/ON
+hightimes = np.linspace(1e-9, 100e-6, 99)  # times the pulse is high/ON
 trig_delay = 0E-6 #delay between the end of the pulse and the measurement trigger
 RF_delay = 0E-6
-meastime = 1e-6 # desired time the measurement, i.e. scope shot, should last (see note below)
+meastime = 10e-6 # desired time the measurement, i.e. scope shot, should last (see note below)
 extra_wait_time = 20e-6
-no_of_avgs = 2000  # number of averages
+no_of_avgs = 20  # number of averages
 pulsehigh =6E-3  # Voltage level of the pulse
 pulselow = 0E-3
 SR = 1e9  # sample rate of the AWG/Pulse
@@ -117,7 +117,7 @@ no_of_widths = len(hightimes)
 
 nsteps = 150
 
-av = AlazarValues('alazar_values', alazarcontroller, chan1, save_raw_data=False)
+av = AlazarValues('alazar_values', alazarcontroller, chan1, save_raw_data=True)
 av.prepare_alazar_values(hightimes)
 
 try:

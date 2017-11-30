@@ -20,10 +20,10 @@ from alazar_controllers.alazar_channel import AlazarChannel
 #                                                                             #
 ###############################################################################
 
-hightime = 500e-6  # time the pulse is high/ON
+hightime = 50e-6  # time the pulse is high/ON
 trig_delay = 0E-6  # delay between the end of the pulse and the measurement trigger
 RF_delay = 0e-6
-meastime = 500e-6  # desired time the measurement, i.e. scope shot, should last (see note below)
+meastime = 16e-6  # desired time the measurement, i.e. scope shot, should last (see note below)
 extra_wait_time = 0e-6
 no_of_avgs = 500  # number of averages
 pulsehigh = 6E-3  # Voltage level of the pulse
@@ -90,7 +90,7 @@ prepareZIUHFLIForAlazar(zi, demod_freq, outputpwr, signalscaling)
 def run_awg():
     while awg1.state() == 'Running':
        # print('AWG not ready')
-        time.sleep(50e-3)
+        time.sleep(10e-3)
     awg1.run()
 
 def dummy_func():
