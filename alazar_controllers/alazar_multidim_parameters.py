@@ -203,7 +203,7 @@ class Alazar1DParameter(AlazarNDParameter):
             start = 0
             stop = buffers
             self.shape = (buffers,)
-            self.setpoints = (tuple(np.linspace(start, stop, buffers, endpoint=False),),)
+            self.setpoints = (tuple(np.linspace(start, stop, buffers, endpoint=False)),)
 
 
 class Alazar2DParameter(AlazarNDParameter):
